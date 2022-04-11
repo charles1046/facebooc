@@ -9,10 +9,6 @@ GIT_HOOKS := .git/hooks/applied
 # 1988 which is too old (defined in sys/cdefs.h)
 CFLAGS += -D_POSIX_C_SOURCE=199506L
 
-$(GIT_HOOKS):
-	@scripts/install-git-hooks
-	@echo
-
 OUT = bin
 EXEC = $(OUT)/facebooc
 OBJS = \
@@ -35,7 +31,7 @@ deps := $(OBJS:%.o=%.o.d)
 src/%.o: src/%.c
 	$(CC) $(CFLAGS) -o $@ -MMD -MF $@.d -c $<
 
-$(EXEC): $(OBJS)
+$(EXEC): $(OBJS) $(GIT_HOOKS)
 	mkdir -p $(OUT)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
@@ -51,5 +47,9 @@ clean:
 	$(RM) $(OBJS) $(EXEC) $(deps)
 distclean: clean
 	$(RM) db.sqlite3
+
+$(GIT_HOOKS):
+	@scripts/install-git-hooks
+	@echo
 
 -include $(deps)
