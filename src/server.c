@@ -134,7 +134,7 @@ static Response *staticHandler(Request *req)
     Response *response = responseNew();
 
     buff = malloc(sizeof(char) * len);
-    fread(buff, sizeof(char), len, file);
+    (void)!fread(buff, sizeof(char), len, file);
     responseSetBody(response, bsNewLen(buff, len));
     fclose(file);
     free(buff);
