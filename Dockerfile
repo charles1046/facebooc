@@ -17,7 +17,7 @@ ENV DB "db.sqlite3"
 WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y libsqlite3-dev && \
-    touch /app/${DB} && chmod 666 /app/${DB} && chown 1000 /app/${DB}
+    touch /app/${DB} && chmod 666 /app/${DB} && chown 1000:1000 /app/${DB}
 COPY ["static", "/app/static/"]
 COPY ["templates", "/app/templates/"]
 
