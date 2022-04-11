@@ -288,8 +288,7 @@ static Response* profile(Request* req) {
 	}
 	else {
 		const size_t name_len = strlen(account->name);
-		const size_t id_len = strlen(account->id);
-		snprintf(connectStr, 76 + name_len + id_len,
+		snprintf(connectStr, 76 + name_len + 10,
 				 "You and %s are not connected."
 				 " <a href=\"/connect/%d/\">Click here</a> to connect!",
 				 account->name, account->id);
@@ -322,9 +321,7 @@ static Response* profile(Request* req) {
 			bsLCat(&res, "Liked - ");
 		}
 		else {
-			const size_t id_len = strlen(post->id);
-			snprintf(sbuff, 42 + id_len, "<a class=\"btn\" href=\"/like/%d/\">Like</a> - ",
-					 post->id);
+			snprintf(sbuff, 52, "<a class=\"btn\" href=\"/like/%d/\">Like</a> - ", post->id);
 			bsLCat(&res, sbuff);
 		}
 
@@ -405,7 +402,7 @@ static Response* unlike(Request* req) {
 
 	if(kvFindList(req->queryString, "r")) {
 		char sbuff[1024];
-		snprintf(sbuff, 11 + strlen(post->authorId), "/profile/%d/", post->authorId);
+		snprintf(sbuff, 21, "/profile/%d/", post->authorId);
 		bsDel(idStr);
 		return responseNewRedirect(sbuff);
 	}
@@ -435,7 +432,7 @@ static Response* like(Request* req) {
 
 	if(kvFindList(req->queryString, "r")) {
 		char sbuff[1024];
-		snprintf(sbuff, 11 + strlen(post->authorId), "/profile/%d/", post->authorId);
+		snprintf(sbuff, 21, "/profile/%d/", post->authorId);
 		bsDel(idStr);
 		return responseNewRedirect(sbuff);
 	}
@@ -463,7 +460,7 @@ static Response* connect(Request* req) {
 	connectionDel(connectionCreate(DB, req->account->id, account->id));
 
 	char sbuff[1024];
-	snprintf(sbuff, 11 + strlen(account->id), "/profile/%d/", account->id);
+	snprintf(sbuff, 21, "/profile/%d/", account->id);
 	bsDel(idStr);
 	return responseNewRedirect(sbuff);
 
@@ -496,11 +493,10 @@ static Response* search(Request* req) {
 	while(accountCell) {
 		account = (Account*)accountCell->value;
 
-		const size_t id_len = strlen(account->id);
 		const size_t name_len = strlen(account->name);
 		const size_t email_len = strlen(account->email);
 
-		snprintf(sbuff, 52 + id_len + name_len + email_len,
+		snprintf(sbuff, 62 + name_len + email_len,
 				 "<li><a href=\"/profile/%d/\">%s</a> (<span>%s</span>)</li>\n", account->id,
 				 account->name, account->email);
 		bsLCat(&res, sbuff);
