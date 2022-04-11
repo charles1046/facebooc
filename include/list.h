@@ -6,18 +6,18 @@
 
 typedef enum IterationResult { BREAK, DONE } IterationResult;
 
-typedef bool (*ListIterator)(void *);
+typedef bool (*ListIterator)(void*);
 
 typedef struct Cell {
-    struct Cell *next;
+	struct Cell* next;
 
-    void *value;
-    size_t size;
+	void* value;
+	size_t size;
 } ListCell;
 
-ListCell *listCons(void *, size_t, ListCell *);
-ListCell *listReverse(ListCell *);
-void listDel(ListCell *);
-IterationResult listForEach(ListCell *, ListIterator);
+ListCell* listCons(void*, size_t, ListCell*);
+ListCell* listReverse(ListCell*);
+void listDel(ListCell*);
+IterationResult listForEach(ListCell*, ListIterator);
 
 #endif
