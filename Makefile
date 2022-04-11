@@ -1,9 +1,5 @@
-CFLAGS = -O3 -std=c11 -Wall -Wextra -I include
-LDFLAGS = -lsqlite3
-
-ifeq ($(OS),Windows_NT)
-	LDFLAGS += -lws2_32
-endif
+CFLAGS = -std=c11 -Wall -Wextra -Werror -I include
+LDFLAGS = -lsqlite3 -lpthread -ldl -lm
 
 UNAME_S = $(shell uname -s)
 
@@ -43,6 +39,9 @@ all: $(EXEC)
 run: $(EXEC)
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
+release: $(OBJS)
+	mkdir -p $(OUT)
+	$(CC) $(CFLAGS) -O3 -s -o $(EXEC) $(OBJS) $(LDFLAGS)
 
 clean:
 	$(RM) $(OBJS) $(EXEC) $(deps)
