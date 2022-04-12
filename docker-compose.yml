@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  facebooc:
+    image: zxc25077667/facebooc:latest
+    container_name: facebooc
+    restart: always
+    volumes:
+      - ./data:/data # Database
+    networks:
+      - swag_facebooc
+
+networks:
+  swag_facebooc:
+    external: true
