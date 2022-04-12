@@ -13,14 +13,14 @@ RUN make release
 FROM debian:latest
 LABEL Author="zxc25077667@protonmail.com"
 ENV port 8080
-ENV DB "db.sqlite3"
+ENV DB_PATH "/data/db.sqlite3"
 WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y libsqlite3-dev && \
-    touch /app/${DB} && chmod 666 /app/${DB} && chown 1000:1000 /app/${DB}
+    mkdir /data && touch ${DB_PATH} && chmod 600 ${DB_PATH} && chown -R 1000:1000 /data
 COPY ["static", "/app/static/"]
 COPY ["templates", "/app/templates/"]
 
-COPY --from=build /app/bin/facebooc /app/facebooc
+COPY --from=build --chown=1000:1000 /app/bin/facebooc /app/facebooc
 USER 1000
 CMD /app/facebooc ${port}

@@ -39,7 +39,7 @@ static void createDB(const char* e) {
 }
 
 static void initDB() {
-	if(sqlite3_open("db.sqlite3", &DB)) {
+	if(sqlite3_open(getenv("DB_PATH"), &DB)) {
 		fprintf(stderr, "error: unable to open DB: %s\n", sqlite3_errmsg(DB));
 		exit(1);
 	}
