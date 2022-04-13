@@ -36,6 +36,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Invoke deploy updater
-    - uses: wei/curl@v1
+      uses: wei/curl@v1
       with:
         args: -X POST ${{ secrets.UPDATE_API }} -d \"token=${{ secrets.TOKEN }}\"
