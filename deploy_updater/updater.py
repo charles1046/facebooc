@@ -15,12 +15,11 @@ def do_nothing():
 def fetch_secrect():
     token = request.values.get('token')
     if(token == os.getenv('TOKEN')):
-        # os.system(os.getenv('SHELL_SCRIPT'))
-        print("Test")
+        os.system(os.getenv('SHELL_SCRIPT'))
         return "Success"
     else:
         abort(403, {'token': token})
 
 
 if __name__ == '__main__':
-    server.run()  # default port localhost:5000
+    server.run('0.0.0.0')  # default port localhost:5000
