@@ -96,8 +96,8 @@ void responseAddCookie(Response* response, char* key, char* value, char* domain,
 	responseAddHeader(response, "Set-Cookie", cbuff);
 }
 
-void responseAddHeader(Response* response, char* key, char* value) {
-	response->headers = listCons(kvNew(key, value), sizeof(KV), response->headers);
+void responseAddHeader(Response* response, const char* key, const char* value) {
+	response->headers = insert(kvNew(key, value), sizeof(KV), response->headers);
 }
 
 void responseDel(Response* response) {
@@ -110,8 +110,8 @@ void responseDel(Response* response) {
 }
 
 void responseWrite(Response* response, int fd) {
-	ListCell* buffer = NULL;
-	ListCell* header;
+	Node* buffer = NULL;
+	Node* header;
 
 	char sbuffer[2048];
 
@@ -124,8 +124,8 @@ void responseWrite(Response* response, int fd) {
 		snprintf(sbuffer, 5 + key_len + val_len, "%s: %s\r\n", ((KV*)header->value)->key,
 				 ((KV*)header->value)->value);
 
-		buffer = listCons(sbuffer, sizeof(char) * (strlen(sbuffer) + 1), buffer);
-		header = header->next;
+		buffer = insert(sbuffer, sizeof(char) * (strlen(sbuffer) + 1), buffer);
+		header = (Node*)header->next;
 	}
 
 	// STATUS
@@ -133,13 +133,13 @@ void responseWrite(Response* response, int fd) {
 	snprintf(sbuffer, 13 + 10 + status_len, "HTTP/1.0 %d %s\r\n", response->status,
 			 STATUSES[response->status / 100 - 1][response->status % 100]);
 
-	buffer = listCons(sbuffer, sizeof(char) * (strlen(sbuffer) + 1), buffer);
+	buffer = insert(sbuffer, sizeof(char) * (strlen(sbuffer) + 1), buffer);
 
 	// OUTPUT
 	while(buffer) {
 		send(fd, buffer->value, strlen(buffer->value), 0);
 
-		buffer = buffer->next;
+		buffer = (Node*)buffer->next;
 	}
 
 	send(fd, "\r\n", 2, 0);

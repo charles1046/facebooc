@@ -4,33 +4,43 @@
 #include "bs.h"
 #include "kv.h"
 
-KV* kvNew(char* key, char* value) {
+// Self implentation
+static inline char* strndup(const char* str, size_t len) {
+	char* dst = malloc(len + 1);
+	if(dst) {
+		memmove(dst, str, len);
+		dst[len] = '\0';
+	}
+	return dst;
+}
+
+KV* kvNew(const char* key, const char* value) {
 	KV* kv = malloc(sizeof(KV));
 
-	kv->key = bsNew(key);
-	kv->value = bsNew(value);
+	kv->key = strndup(key, strlen(key));
+	kv->value = strndup(value, strlen(value));
 
 	return kv;
 }
 
 void kvDel(KV* kv) {
-	bsDel(kv->key);
-	bsDel(kv->value);
+	free(kv->key);
+	free(kv->value);
 	free(kv);
 }
 
 static bool kvDelEach(void* kv) {
 	if(kv) {
-		bsDel(((KV*)kv)->key);
-		bsDel(((KV*)kv)->value);
+		free(((KV*)kv)->key);
+		free(((KV*)kv)->value);
 	}
 
 	return true;
 }
 
-void kvDelList(ListCell* list) {
+void kvDelList(Node* list) {
 	listForEach(list, kvDelEach);
-	listDel(list);
+	clear(list);
 }
 
 static bool kvPrintEach(void* kv) {
@@ -39,15 +49,17 @@ static bool kvPrintEach(void* kv) {
 	return true;
 }
 
-void kvPrintList(ListCell* list) {
+void kvPrintList(Node* list) {
 	listForEach(list, kvPrintEach);
 }
 
-char* kvFindList(ListCell* cell, char* key) {
-	while(cell) {
-		if(!strcmp(((KV*)cell->value)->key, key))
-			return ((KV*)cell->value)->value;
-		cell = cell->next;
+char* kvFindList(const Node* head, const char* key) {
+	Node* iter = (Node*)head;
+	while(iter) {
+		const KV* item = iter->value;
+		if(!strcmp(item->key, key))
+			return item->value;
+		iter = iter->next;
 	}
 
 	return NULL;

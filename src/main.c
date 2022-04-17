@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
 
 	Server* server = serverNew(server_port);
 	serverAddHandler(server, notFound);
-	serverAddStaticHandler(server);
+	serverAddHandler(server, home);
 	serverAddHandler(server, about);
 	serverAddHandler(server, signup);
 	serverAddHandler(server, logout);
@@ -130,8 +130,8 @@ int main(int argc, char* argv[]) {
 	serverAddHandler(server, post);
 	serverAddHandler(server, profile);
 	serverAddHandler(server, dashboard);
-	serverAddHandler(server, home);
 	serverAddHandler(server, session);
+	serverAddStaticHandler(server);
 	serverServe(server);
 
 	return 0;
@@ -188,8 +188,8 @@ static Response* dashboard(Request* req) {
 
 	Account* account = NULL;
 	Post* post = NULL;
-	ListCell* postPCell = NULL;
-	ListCell* postCell = postGetLatestGraph(DB, req->account->id, 0);
+	Node* postPCell = NULL;
+	Node* postCell = postGetLatestGraph(DB, req->account->id, 0);
 
 	if(postCell)
 		res = bsNew("<ul class=\"posts\">");
@@ -231,7 +231,7 @@ static Response* dashboard(Request* req) {
 		bsDel(bbuff);
 		postDel(post);
 		postPCell = postCell;
-		postCell = postCell->next;
+		postCell = (Node*)postCell->next;
 
 		free(postPCell);
 	}
@@ -301,15 +301,14 @@ static Response* profile(Request* req) {
 	time_t t;
 	bool liked;
 
-	Post* post = NULL;
-	ListCell* postPCell = NULL;
-	ListCell* postCell = postGetLatest(DB, account->id, 0);
+	Node* postPCell = NULL;
+	Node* postCell = postGetLatest(DB, account->id, 0);
 
 	if(postCell)
 		res = bsNew("<ul class=\"posts\">");
 
 	while(postCell) {
-		post = (Post*)postCell->value;
+		Post* post = (Post*)postCell->value;
 		liked = likeLiked(DB, req->account->id, post->id);
 
 		const size_t body_len = strlen(post->body);
@@ -334,7 +333,7 @@ static Response* profile(Request* req) {
 		bsDel(bbuff);
 		postDel(post);
 		postPCell = postCell;
-		postCell = postCell->next;
+		postCell = (Node*)postCell->next;
 
 		free(postPCell);
 	}
@@ -485,8 +484,8 @@ static Response* search(Request* req) {
 	char sbuff[1024];
 
 	Account* account = NULL;
-	ListCell* accountPCell = NULL;
-	ListCell* accountCell = accountSearch(DB, query, 0);
+	Node* accountPCell = NULL;
+	Node* accountCell = accountSearch(DB, query, 0);
 
 	if(accountCell)
 		res = bsNew("<ul class=\"search-results\">");
@@ -504,7 +503,7 @@ static Response* search(Request* req) {
 
 		accountDel(account);
 		accountPCell = accountCell;
-		accountCell = accountCell->next;
+		accountCell = (Node*)accountCell->next;
 
 		free(accountPCell);
 	}

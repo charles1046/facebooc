@@ -1,158 +1,32 @@
+#include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#include "bs.h"
+#include "http/http.h"
 #include "kv.h"
 #include "request.h"
 
-// TODO: Make this less shitty.
-static inline char* urldecode(char* segment) {
-	char* cc = segment;
-	char* bs = bsNew("");
-	char escCode[3] = "\0\0\0";
-	char escChar[2] = "\0\0";
+static inline _Bool set_method(Request* req, const char* segment) {
+	static const char* methods__[] = {
+		"OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT",
+	};
+	const int len = sizeof(methods__) / sizeof(*methods__);
 
-	while(*cc != '\0') {
-		switch(*cc) {
-			case '+':
-				*cc++ = ' ';
-				break;
-			case '%':
-				*cc++ = '\0';
-				bsLCat(&bs, segment);
-				escCode[0] = *cc++;
-				escCode[1] = *cc++;
-				escChar[0] = (char)strtol(escCode, NULL, 16);
-
-				segment = cc;
-
-				bsLCat(&bs, escChar);
-				break;
-			default:
-				cc++;
+	for(int i = 0; i < len; i++)
+		if(strcmp(segment, methods__[i]) == 0) {
+			CONST_INIT(req->method, i);
+			return true;
 		}
-	}
-	bsLCat(&bs, segment);
 
-	return bs;
+	CONST_INIT(req->method, UNKNOWN_METHOD);
+	return false;
 }
 
-static inline ListCell* parseCookies(char* header) {
-	ListCell* cookies = NULL;
-	char* copy = bsNew(header);
-	char *segment, *key;
-
-	bool s = true;
-
-	for(;;) {
-		if(s) {
-			segment = strtok(copy, "=");
-			s = false;
-		}
-		else {
-			segment = strtok(NULL, "=");
-		}
-
-		if(!segment)
-			break;
-
-		if(*segment == ' ')
-			segment += 1;
-
-		key = segment;
-		segment = strtok(NULL, ";\0");
-
-		if(!segment)
-			break;
-
-		cookies = listCons(kvNew(key, segment), sizeof(KV), cookies);
-	}
-
-	bsDel(copy);
-
-	return cookies;
-}
-
-static inline ListCell* parseQS(char* path) {
-	ListCell* qs = NULL;
-	char* copy = bsNew(path);
-	char *segment, *key, *value;
-
-	bool s = true;
-
-	for(;;) {
-		if(s) {
-			segment = strtok(copy, "=");
-			s = false;
-		}
-		else {
-			segment = strtok(NULL, "=");
-		}
-
-		if(!segment)
-			break;
-		if(*(segment + strlen(segment) + 1) == '&')
-			continue;
-
-		key = segment;
-		segment = strtok(NULL, "&\0");
-
-		if(!segment)
-			break;
-
-		key = urldecode(key);
-		value = urldecode(segment);
-		qs = listCons(kvNew(key, value), sizeof(KV), qs);
-
-		bsDel(key);
-		bsDel(value);
-	}
-
-	bsDel(copy);
-
-	return qs;
-}
-
-static inline ListCell* parseHeaders(char* segment) {
-	ListCell* headers = NULL;
-	size_t len;
-	char* header;
-
-	while(segment) {
-		segment = strtok(NULL, ":\n");
-		if(!segment || *segment == '\r')
-			break;
-
-		header = segment;
-		segment = strtok(NULL, "\n");
-
-		if(!segment)
-			break;
-
-		if(*segment == ' ')
-			segment += 1;
-
-		len = strlen(segment);
-
-		if(*(segment + len - 1) == '\r')
-			*(segment + len - 1) = '\0';
-
-		headers = listCons(kvNew(header, segment), sizeof(KV), headers);
-	}
-
-	return headers;
-}
-
-#define TOK(s, d)           \
-	segment = strtok(s, d); \
-	if(!segment)            \
-		goto fail;
-
-Request* requestNew(char* buff) {
+static inline Request* request_ctor() {
 	Request* request = malloc(sizeof(Request));
-
-	char *segment, *bs;
-
-	request->method = UNKNOWN_METHOD;
+	assert(request);
+	CONST_INIT(request->method, UNKNOWN_METHOD);
 	request->path = NULL;
 	request->uri = NULL;
 	request->queryString = NULL;
@@ -160,75 +34,101 @@ Request* requestNew(char* buff) {
 	request->headers = NULL;
 	request->cookies = NULL;
 	request->account = NULL;
+	return request;
+}
 
-	// METHOD
-	TOK(buff, " \t");
+static inline size_t get_uri_len(const char* buf) {
+	size_t cur = -1;
 
-	if(!strcmp(segment, "OPTIONS"))
-		request->method = OPTIONS;
-	else if(!strcmp(segment, "GET"))
-		request->method = GET;
-	else if(!strcmp(segment, "HEAD"))
-		request->method = HEAD;
-	else if(!strcmp(segment, "POST"))
-		request->method = POST;
-	else if(!strcmp(segment, "PUT"))
-		request->method = PUT;
-	else if(!strcmp(segment, "DELETE"))
-		request->method = DELETE;
-	else if(!strcmp(segment, "TRACE"))
-		request->method = TRACE;
-	else if(!strcmp(segment, "CONNECT"))
-		request->method = CONNECT;
-	else
+	while(buf[++cur] != ' ')
+		;
+
+	// Start the uri
+	size_t counter = 0;
+	while(buf[++cur] != ' ')  // end of uri is a space
+		++counter;
+
+	return counter;
+}
+
+// Parse Request line, rfc2616 section 5.1
+// Request-Line   = Method SP Request-URI SP HTTP-Version CRLF
+static inline _Bool parse_request_line(Request* req, const char* buf, size_t* offset) {
+	// Suppose buf is not empty (Remove un-essential branch)
+
+	// Get uri len
+	const size_t uri_len = get_uri_len(buf);
+
+	char method[8];
+	char* uri = malloc(uri_len + 1);
+	char version[9];
+	sscanf(buf, "%s \t %s \t %s \r\n", method, uri, version);
+	uri[uri_len] = 0;
+
+	if(set_method(req, method) == false)
 		goto fail;
 
-	// PATH
-	TOK(NULL, " \t");
-
-	request->path = bsNew(segment);
-	request->uri = bsNew(segment);
-
-	if(strchr(request->path, '#'))
+	// Check version string
+	if(strncmp("HTTP/1.", version, 6))
+		goto fail;
+	if(version[7] != '1' && version[7] != '0')
 		goto fail;
 
-	// VERSION
-	TOK(NULL, "\n");
+	// Actual init uri and path
+	CONST_INIT(req->path, uri);
+	CONST_INIT(req->uri, uri);
+	*offset = strlen(method) + uri_len + strlen(version)
+			  + strlen(" "
+					   " \r\n");
 
-	if(strncmp(segment, "HTTP/1.0", 8) != 0 && strncmp(segment, "HTTP/1.1", 8) != 0)
+	return true;
+
+fail:
+	free(uri);
+	return false;
+}
+
+// Return true for success
+// If no query, always success
+static inline _Bool split_query_string(Request* req) {
+	char* begin = strchr(req->path, '?');
+	if(!begin)	// No query
+		return true;
+
+	const size_t uri_len = begin - req->path;
+	req->uri = malloc(uri_len + 1);	 // split an uri from path
+	memcpy((char*)req->uri, req->path, uri_len);
+	*(char*)(&req->uri[uri_len]) = 0;
+
+	req->queryString = query_parser(begin + 1);
+
+	return !!req->queryString;
+}
+
+// Parse HTTP request
+// Refer to https://datatracker.ietf.org/doc/html/rfc2616
+// generic-message: rfc2616 section 4.1
+// generic-message = Request-Line
+//                   *(message-header CRLF)
+//                   *CRLF
+//                   [ message-body ]
+Request* requestNew(char* buff) {
+	Request* request = request_ctor();
+
+	size_t offset = 0;
+	if(parse_request_line(request, buff, &offset) == false)
 		goto fail;
-
-	// HEADERS
-	request->headers = parseHeaders(segment);
-
-	// BODY
-	bs = kvFindList(request->headers, "Content-Type");
-
-	if(bs && !strncmp(bs, "application/x-www-form-urlencoded", 33)) {
-		segment = strtok(NULL, "\0");
-		if(!segment)
-			goto fail;
-
-		request->postBody = parseQS(segment);
-	}
 
 	// QUERYSTRING
-	segment = strchr(request->path, '?');
-	if(segment) {
-		request->uri = bsNewLen(request->path, segment - request->path);
-		request->queryString = parseQS(segment + 1);
-		if(!request->queryString)
-			goto fail;
-	}
+	if(split_query_string(request) == false)
+		goto fail;
 
+	// HEADERS, Read until "\r\n"
+	request->headers = header_parser(buff + offset, &offset);
 	// COOKIES
-	segment = kvFindList(request->headers, "Cookie");
-
-	if(segment) {
-		request->cookies = parseCookies(segment);
-		if(!request->cookies)
-			goto fail;
-	}
+	request->cookies = cookies_parser(request->headers);
+	// BODY
+	request->postBody = body_parser(request->headers, buff + offset);
 
 	return request;
 
@@ -239,18 +139,18 @@ fail:
 }
 
 void requestDel(Request* req) {
+	if(req->path != req->uri)
+		free((char*)req->uri);	// It has a query, uri is splitted from path
 	if(req->path)
-		bsDel(req->path);
-	if(req->uri)
-		bsDel(req->uri);
+		free((char*)req->path);
 	if(req->queryString)
-		kvDelList(req->queryString);
+		kvDelList((Node*)req->queryString);
 	if(req->postBody)
-		kvDelList(req->postBody);
+		kvDelList((Node*)req->postBody);
 	if(req->headers)
-		kvDelList(req->headers);
+		kvDelList((Node*)req->headers);
 	if(req->cookies)
-		kvDelList(req->cookies);
+		kvDelList((Node*)req->cookies);
 	if(req->account)
 		accountDel(req->account);
 

@@ -6,7 +6,7 @@
 typedef struct Template {
 	char* filename;
 
-	ListCell* context;
+	Node* context;
 } Template;
 
 Template* templateNew(char*);

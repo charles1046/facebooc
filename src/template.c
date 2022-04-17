@@ -23,7 +23,7 @@ void templateDel(Template* template) {
 }
 
 void templateSet(Template* template, char* key, char* value) {
-	template->context = listCons(kvNew(key, value), sizeof(KV), template->context);
+	template->context = insert(kvNew(key, value), sizeof(KV), template->context);
 }
 
 char* templateRender(Template* template) {
