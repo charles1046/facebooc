@@ -54,7 +54,7 @@ typedef enum Status {
 typedef struct Response {
 	Status status;
 
-	ListCell* headers;
+	Node* headers;
 
 	char* body;
 } Response;

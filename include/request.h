@@ -24,10 +24,10 @@ typedef struct Request {
 	char* path;
 	char* uri;
 
-	ListCell* queryString;
-	ListCell* postBody;
-	ListCell* cookies;
-	ListCell* headers;
+	Node* queryString;
+	Node* postBody;
+	Node* cookies;
+	Node* headers;
 
 	Account* account;  // Don't worry. You're doing fine. Game is hard.
 } Request;

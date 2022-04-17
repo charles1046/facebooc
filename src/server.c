@@ -75,7 +75,7 @@ Server* serverNew(uint16_t port) {
 
 void serverDel(Server* server) {
 	if(server->handlers)
-		listDel(server->handlers);
+		clear(server->handlers);
 	free(server);
 
 #ifdef _WIN32
@@ -85,7 +85,7 @@ void serverDel(Server* server) {
 
 void serverAddHandler(Server* server, Handler handler) {
 	HandlerP handlerP = &handler;
-	server->handlers = listCons(handlerP, sizeof(HandlerP), server->handlers);
+	server->handlers = insert(handlerP, sizeof(HandlerP), server->handlers);
 }
 
 static Response* staticHandler(Request* req) {
@@ -268,7 +268,7 @@ static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
 			LOG_400(addr);
 		}
 		else {
-			ListCell* handler = server->handlers;
+			Node* handler = server->handlers;
 			Response* response = NULL;
 
 			while(handler && !response) {

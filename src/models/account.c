@@ -149,13 +149,13 @@ fail:
 	return account;
 }
 
-ListCell* accountSearch(sqlite3* DB, char* query, int page) {
+Node* accountSearch(sqlite3* DB, char* query, int page) {
 	if(!query)
 		return NULL;
 
 	int rc;
 	Account* account = NULL;
-	ListCell* accounts = NULL;
+	Node* accounts = NULL;
 	sqlite3_stmt* statement;
 
 	rc = sqlite3_prepare_v2(DB,
@@ -185,7 +185,7 @@ ListCell* accountSearch(sqlite3* DB, char* query, int page) {
 							 (char*)sqlite3_column_text(statement, 2),
 							 (char*)sqlite3_column_text(statement, 3),
 							 (char*)sqlite3_column_text(statement, 4));
-		accounts = listCons(account, sizeof(Account), accounts);
+		accounts = insert(account, sizeof(Account), accounts);
 	}
 
 fail:

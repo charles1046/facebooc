@@ -36,8 +36,8 @@ static inline char* urldecode(char* segment) {
 	return bs;
 }
 
-static inline ListCell* parseCookies(char* header) {
-	ListCell* cookies = NULL;
+static inline Node* parseCookies(char* header) {
+	Node* cookies = NULL;
 	char* copy = bsNew(header);
 	char *segment, *key;
 
@@ -64,7 +64,7 @@ static inline ListCell* parseCookies(char* header) {
 		if(!segment)
 			break;
 
-		cookies = listCons(kvNew(key, segment), sizeof(KV), cookies);
+		cookies = insert(kvNew(key, segment), sizeof(KV), cookies);
 	}
 
 	bsDel(copy);
@@ -72,8 +72,8 @@ static inline ListCell* parseCookies(char* header) {
 	return cookies;
 }
 
-static inline ListCell* parseQS(char* path) {
-	ListCell* qs = NULL;
+static inline Node* parseQS(char* path) {
+	Node* qs = NULL;
 	char* copy = bsNew(path);
 	char *segment, *key, *value;
 
@@ -101,7 +101,7 @@ static inline ListCell* parseQS(char* path) {
 
 		key = urldecode(key);
 		value = urldecode(segment);
-		qs = listCons(kvNew(key, value), sizeof(KV), qs);
+		qs = insert(kvNew(key, value), sizeof(KV), qs);
 
 		bsDel(key);
 		bsDel(value);
@@ -112,8 +112,8 @@ static inline ListCell* parseQS(char* path) {
 	return qs;
 }
 
-static inline ListCell* parseHeaders(char* segment) {
-	ListCell* headers = NULL;
+static inline Node* parseHeaders(char* segment) {
+	Node* headers = NULL;
 	size_t len;
 	char* header;
 
@@ -136,7 +136,7 @@ static inline ListCell* parseHeaders(char* segment) {
 		if(*(segment + len - 1) == '\r')
 			*(segment + len - 1) = '\0';
 
-		headers = listCons(kvNew(header, segment), sizeof(KV), headers);
+		headers = insert(kvNew(header, segment), sizeof(KV), headers);
 	}
 
 	return headers;
@@ -201,17 +201,6 @@ Request* requestNew(char* buff) {
 	// HEADERS
 	request->headers = parseHeaders(segment);
 
-	// BODY
-	bs = kvFindList(request->headers, "Content-Type");
-
-	if(bs && !strncmp(bs, "application/x-www-form-urlencoded", 33)) {
-		segment = strtok(NULL, "\0");
-		if(!segment)
-			goto fail;
-
-		request->postBody = parseQS(segment);
-	}
-
 	// QUERYSTRING
 	segment = strchr(request->path, '?');
 	if(segment) {
@@ -228,6 +217,38 @@ Request* requestNew(char* buff) {
 		request->cookies = parseCookies(segment);
 		if(!request->cookies)
 			goto fail;
+	}
+
+	// BODY, refer to RFC2616
+	/**
+	 *    HTTP messages consist of requests from client to server and responses
+	 *    from server to client.
+	 *
+	 *        HTTP-message   = Request | Response     ; HTTP/1.1 messages
+	 *
+	 *    Request (section 5) and Response (section 6) messages use the generic
+	 *    message format of RFC 822 [9] for transferring entities (the payload
+	 *    of the message). Both types of message consist of a start-line, zero
+	 *    or more header fields (also known as headers), an empty line (i.e.,
+	 *    a line with nothing preceding the CRLF) indicating the end of the
+	 *    header fields, and possibly a message-body.
+	 *
+	 *         generic-message = start-line
+	 *                           *(message-header CRLF)
+	 *                           CRLF
+	 *                           [ message-body ]
+	 *         start-line      = Request-Line | Status-Line
+	 */
+	bs = kvFindList(request->headers, "Content-Type");
+	if(!bs)
+		bs = kvFindList(request->headers, "content-Type");
+
+	if(bs && !strncmp(bs, "application/x-www-form-urlencoded", 33)) {
+		segment = strtok(NULL, "\0");
+		if(!segment)
+			goto fail;
+
+		request->postBody = parseQS(segment);
 	}
 
 	return request;

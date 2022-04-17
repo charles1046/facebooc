@@ -2,22 +2,22 @@
 #define LIST_H
 
 #include <stdbool.h>
-#include <stdlib.h>
 
-typedef enum IterationResult { BREAK, DONE } IterationResult;
+// TODO: Generalize this name of "function"
+// A function takes pointer and returns a bool,
+// which operate element of a list
+typedef _Bool (*List_op)(void*);
 
-typedef bool (*ListIterator)(void*);
+typedef struct node {
+	struct node* next;
 
-typedef struct Cell {
-	struct Cell* next;
+	const void* const value;
+	const size_t size;
+} Node;
 
-	void* value;
-	size_t size;
-} ListCell;
-
-ListCell* listCons(void*, size_t, ListCell*);
-ListCell* listReverse(ListCell*);
-void listDel(ListCell*);
-IterationResult listForEach(ListCell*, ListIterator);
+Node* insert(const void* value, size_t size, const Node* next);
+void clear(Node* head);
+_Bool listForEach(Node* head, List_op func);
+Node* reverse(Node* head);
 
 #endif

@@ -12,8 +12,8 @@ typedef struct KV {
 
 KV* kvNew(char*, char*);
 void kvDel(KV*);
-void kvDelList(ListCell*);
-void kvPrintList(ListCell*);
-char* kvFindList(ListCell*, char*);
+void kvDelList(Node*);
+void kvPrintList(Node*);
+char* kvFindList(Node*, char*);
 
 #endif

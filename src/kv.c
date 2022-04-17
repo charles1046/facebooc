@@ -28,9 +28,9 @@ static bool kvDelEach(void* kv) {
 	return true;
 }
 
-void kvDelList(ListCell* list) {
+void kvDelList(Node* list) {
 	listForEach(list, kvDelEach);
-	listDel(list);
+	clear(list);
 }
 
 static bool kvPrintEach(void* kv) {
@@ -39,15 +39,15 @@ static bool kvPrintEach(void* kv) {
 	return true;
 }
 
-void kvPrintList(ListCell* list) {
+void kvPrintList(Node* list) {
 	listForEach(list, kvPrintEach);
 }
 
-char* kvFindList(ListCell* cell, char* key) {
+char* kvFindList(Node* cell, char* key) {
 	while(cell) {
 		if(!strcmp(((KV*)cell->value)->key, key))
 			return ((KV*)cell->value)->value;
-		cell = cell->next;
+		cell = (Node*)cell->next;
 	}
 
 	return NULL;

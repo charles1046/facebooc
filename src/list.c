@@ -1,51 +1,55 @@
+#include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "list.h"
 
-ListCell* listCons(void* value, size_t size, ListCell* next) {
-	ListCell* cell = malloc(sizeof(ListCell));
+Node* insert(const void* value, size_t size, const Node* next) {
+	Node* new_node = malloc(sizeof(Node));
+	assert(new_node);
 
-	cell->next = next;
-	cell->value = malloc(size);
-	cell->size = size;
+	*(void**)(&new_node->value) = malloc(size);	 // Bypass const
+	assert(new_node->value);
 
-	memcpy(cell->value, value, size);
+	new_node->next = (Node*)next;
+	*(size_t*)(&new_node->size) = size;	 // Bypass const
 
-	return cell;
+	memcpy((void*)new_node->value, value, size);
+
+	return new_node;
 }
 
-ListCell* listReverse(ListCell* cell) {
-	ListCell* prev = NULL;
-	while(cell) {
-		ListCell* next = cell->next;
-		cell->next = prev;
-		prev = cell;
-		cell = next;
+void clear(Node* node) {
+	while(node != NULL) {
+		const Node* tmp = node->next;
+		free((void*)node->value);
+		free(node);
+		node = (Node*)tmp;
+	}
+}
+
+_Bool listForEach(Node* node, List_op func) {
+	_Bool result = true;
+	Node** indrect = &node;
+
+	while(*indrect != NULL && result) {
+		result = func((void*)(*indrect)->value);  // Do it
+		indrect = (Node**)&((*indrect)->next);	  // To next
+	}
+
+	return result;
+}
+
+Node* reverse(Node* head) {
+	Node* cur = head;
+	Node* prev = NULL;
+
+	while(cur) {
+		Node* tmp = cur->next;
+		cur->next = prev;
+		prev = cur;
+		cur = tmp;
 	}
 
 	return prev;
-}
-
-void listDel(ListCell* cell) {
-	if(!cell)
-		return;
-	do {
-		ListCell* next = cell->next;
-		free(cell->value);
-		free(cell);
-		cell = next;
-	} while(cell);
-}
-
-IterationResult listForEach(ListCell* cell, ListIterator iterator) {
-	if(!cell)
-		return DONE;
-
-	bool res;
-	do {
-		res = iterator(cell->value);
-		cell = cell->next;
-	} while(cell && res);
-
-	return res ? DONE : BREAK;
 }

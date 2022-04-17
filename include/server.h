@@ -9,7 +9,7 @@
 typedef struct Server {
 	unsigned int port;
 	uintptr_t priv;
-	ListCell* handlers;
+	Node* handlers;
 } Server;
 
 typedef Response* (*Handler)(Request*);

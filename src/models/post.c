@@ -76,14 +76,14 @@ fail:
 	return post;
 }
 
-ListCell* postGetLatest(sqlite3* DB, int accountId, int page) {
+Node* postGetLatest(sqlite3* DB, int accountId, int page) {
 	if(accountId == -1)
 		return NULL;
 
 	int rc;
 	Post* post = NULL;
-	ListCell* posts = NULL;
-	sqlite3_stmt* statement;
+	Node* posts = NULL;
+	sqlite3_stmt* statement = NULL;
 
 	rc = sqlite3_prepare_v2(DB,
 							"SELECT id, createdAt, author, body"
@@ -105,23 +105,23 @@ ListCell* postGetLatest(sqlite3* DB, int accountId, int page) {
 		post = postNew(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
 					   sqlite3_column_int(statement, 2),
 					   bsNewline2BR((char*)sqlite3_column_text(statement, 3)));
-		posts = listCons(post, sizeof(Post), posts);
+		posts = insert(post, sizeof(Post), posts);
 	}
 
-	posts = listReverse(posts);
+	posts = reverse(posts);
 
 fail:
 	sqlite3_finalize(statement);
 	return posts;
 }
 
-ListCell* postGetLatestGraph(sqlite3* DB, int accountId, int page) {
+Node* postGetLatestGraph(sqlite3* DB, int accountId, int page) {
 	if(accountId == -1)
 		return NULL;
 
 	int rc;
 	Post* post = NULL;
-	ListCell* posts = NULL;
+	Node* posts = NULL;
 	sqlite3_stmt* statement;
 
 	rc = sqlite3_prepare_v2(DB,
@@ -149,10 +149,10 @@ ListCell* postGetLatestGraph(sqlite3* DB, int accountId, int page) {
 		post = postNew(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
 					   sqlite3_column_int(statement, 2),
 					   bsNewline2BR((char*)sqlite3_column_text(statement, 3)));
-		posts = listCons(post, sizeof(Post), posts);
+		posts = insert(post, sizeof(Post), posts);
 	}
 
-	posts = listReverse(posts);
+	posts = reverse(posts);
 
 fail:
 	sqlite3_finalize(statement);
