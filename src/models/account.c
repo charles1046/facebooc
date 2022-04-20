@@ -114,7 +114,7 @@ fail:
 	return account;
 }
 
-Account* accountGetBySId(sqlite3* DB, char* sid) {
+Account* accountGetBySId(sqlite3* DB, const char* sid) {
 	if(!sid)
 		return NULL;
 
