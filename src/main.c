@@ -18,6 +18,71 @@
 Server* server = NULL;
 sqlite3* DB = NULL;
 
+static void sig(int signum);
+static void createDB(const char* e);
+static void initDB();
+static Response* session(Request*);
+static Response* home(Request*);
+static Response* dashboard(Request*);
+static Response* profile(Request*);
+static Response* post(Request*);
+static Response* like(Request*);
+static Response* unlike(Request*);
+static Response* connect(Request*);
+static Response* search(Request*);
+static Response* login(Request*);
+static Response* logout(Request*);
+static Response* signup(Request*);
+static Response* about(Request*);
+static Response* notFound(Request*);
+
+int main(int argc, char* argv[]) {
+	if(signal(SIGINT, sig) == SIG_ERR || signal(SIGTERM, sig) == SIG_ERR) {
+		fprintf(stderr, "error: failed to bind signal handler\n");
+		return 1;
+	}
+
+	srand(time(NULL));
+
+	initDB();
+
+	uint16_t server_port = 8080;
+
+	if(argc > 1 && sscanf(argv[1], "%hu", &server_port) == 0) {
+		fprintf(stderr, "error: invalid command line argument, using default port "
+						"8080.\n");
+		server_port = 8080;
+	}
+
+	Server* server = serverNew(server_port);
+	serverAddHandler(server, notFound);
+	serverAddStaticHandler(server);
+	serverAddHandler(server, about);
+	serverAddHandler(server, signup);
+	serverAddHandler(server, logout);
+	serverAddHandler(server, login);
+	serverAddHandler(server, search);
+	serverAddHandler(server, connect);
+	serverAddHandler(server, like);
+	serverAddHandler(server, unlike);
+	serverAddHandler(server, post);
+	serverAddHandler(server, profile);
+	serverAddHandler(server, dashboard);
+	serverAddHandler(server, home);
+	serverAddHandler(server, session);
+	serverServe(server);
+
+	return 0;
+}
+
+/* handlers */
+
+#define invalid(k, v)                \
+	{                                \
+		templateSet(template, k, v); \
+		valid = false;               \
+	}
+
 static void sig(int signum) {
 	if(server)
 		serverDel(server);
@@ -83,70 +148,8 @@ static void initDB() {
 			 ")");
 }
 
-static Response* session(Request*);
-static Response* home(Request*);
-static Response* dashboard(Request*);
-static Response* profile(Request*);
-static Response* post(Request*);
-static Response* like(Request*);
-static Response* unlike(Request*);
-static Response* connect(Request*);
-static Response* search(Request*);
-static Response* login(Request*);
-static Response* logout(Request*);
-static Response* signup(Request*);
-static Response* about(Request*);
-static Response* notFound(Request*);
-
-int main(int argc, char* argv[]) {
-	if(signal(SIGINT, sig) == SIG_ERR || signal(SIGTERM, sig) == SIG_ERR) {
-		fprintf(stderr, "error: failed to bind signal handler\n");
-		return 1;
-	}
-
-	srand(time(NULL));
-
-	initDB();
-
-	uint16_t server_port = 8080;
-
-	if(argc > 1 && sscanf(argv[1], "%hu", &server_port) == 0) {
-		fprintf(stderr, "error: invalid command line argument, using default port "
-						"8080.\n");
-		server_port = 8080;
-	}
-
-	Server* server = serverNew(server_port);
-	serverAddHandler(server, notFound);
-	serverAddHandler(server, home);
-	serverAddHandler(server, about);
-	serverAddHandler(server, signup);
-	serverAddHandler(server, logout);
-	serverAddHandler(server, login);
-	serverAddHandler(server, search);
-	serverAddHandler(server, connect);
-	serverAddHandler(server, like);
-	serverAddHandler(server, unlike);
-	serverAddHandler(server, post);
-	serverAddHandler(server, profile);
-	serverAddHandler(server, dashboard);
-	serverAddHandler(server, session);
-	serverAddStaticHandler(server);
-	serverServe(server);
-
-	return 0;
-}
-
-/* handlers */
-
-#define invalid(k, v)                \
-	{                                \
-		templateSet(template, k, v); \
-		valid = false;               \
-	}
-
 static Response* session(Request* req) {
-	char* sid = kvFindList(req->cookies, "sid");
+	const char* sid = kvFindList(req->cookies, "sid");
 
 	if(sid)
 		req->account = accountGetBySId(DB, sid);
@@ -195,13 +198,13 @@ static Response* dashboard(Request* req) {
 		res = bsNew("<ul class=\"posts\">");
 
 	while(postCell) {
-		post = (Post*)postCell->value;
-		account = accountGetById(DB, post->authorId);
-		liked = likeLiked(DB, req->account->id, post->id);
+		Post* post = (Post*)postCell->value;
+		Account* account = accountGetById(DB, post->authorId);
+		bool liked = likeLiked(DB, req->account->id, post->id);
 		const size_t acc_len = strlen(account->name);
 		const size_t post_len = strlen(post->body);
 
-		bbuff = bsNewLen("", strlen(post->body) + 256);
+		char* bbuff = bsNewLen("", strlen(post->body) + 256);
 		snprintf(bbuff, 86 + acc_len + post_len,
 				 "<li class=\"post-item\">"
 				 "<div class=\"post-author\">%s</div>"
@@ -212,6 +215,7 @@ static Response* dashboard(Request* req) {
 		accountDel(account);
 		bsLCat(&res, bbuff);
 
+		char sbuff[128];
 		if(liked) {
 			snprintf(sbuff, 55, "<a class=\"btn\" href=\"/unlike/%d/\">Liked</a> - ", post->id);
 			bsLCat(&res, sbuff);
@@ -221,8 +225,8 @@ static Response* dashboard(Request* req) {
 			bsLCat(&res, sbuff);
 		}
 
-		t = post->createdAt;
-		info = gmtime(&t);
+		time_t t = post->createdAt;
+		struct tm* info = gmtime(&t);
 		info->tm_hour = info->tm_hour + 8;
 		strftime(sbuff, 128, "%c GMT+8", info);
 		bsLCat(&res, sbuff);
@@ -236,6 +240,7 @@ static Response* dashboard(Request* req) {
 		free(postPCell);
 	}
 
+	Template* template = templateNew("templates/dashboard.html");
 	if(res) {
 		bsLCat(&res, "</ul>");
 		templateSet(template, "graph", res);
@@ -251,6 +256,7 @@ static Response* dashboard(Request* req) {
 	templateSet(template, "loggedIn", "t");
 	templateSet(template, "subtitle", "Dashboard");
 	templateSet(template, "accountName", req->account->name);
+	Response* response = responseNew();
 	responseSetStatus(response, OK);
 	responseSetBody(response, templateRender(template));
 	templateDel(template);
@@ -266,22 +272,17 @@ static Response* profile(Request* req) {
 	int id = -1;
 	int idStart = strchr(req->uri + 1, '/') + 1 - req->uri;
 	char* idStr = bsSubstr(req->uri, idStart, -1);
-
 	sscanf(idStr, "%d", &id);
 
 	Account* account = accountGetById(DB, id);
 
 	if(!account)
 		return NULL;
-
 	if(account->id == req->account->id)
 		return responseNewRedirect("/dashboard/");
 
-	Response* response = responseNew();
-	Template* template = templateNew("templates/profile.html");
 	Connection* connection = connectionGetByAccountIds(DB, req->account->id, account->id);
 	char connectStr[512];
-
 	if(connection) {
 		snprintf(connectStr, 26 + strlen(account->name), "You and %s are connected!",
 				 account->name);
@@ -304,9 +305,11 @@ static Response* profile(Request* req) {
 	Node* postPCell = NULL;
 	Node* postCell = postGetLatest(DB, account->id, 0);
 
-	if(postCell)
-		res = bsNew("<ul class=\"posts\">");
-
+	char* res = postCell ? bsNew("<ul class=\"posts\">") : NULL;
+	bool liked;
+	char sbuff[128];
+	char* bbuff = NULL;
+	time_t t;
 	while(postCell) {
 		Post* post = (Post*)postCell->value;
 		liked = likeLiked(DB, req->account->id, post->id);
@@ -337,7 +340,7 @@ static Response* profile(Request* req) {
 
 		free(postPCell);
 	}
-
+	Template* template = templateNew("templates/profile.html");
 	if(res) {
 		bsLCat(&res, "</ul>");
 		templateSet(template, "profilePosts", res);
@@ -357,6 +360,7 @@ static Response* profile(Request* req) {
 	templateSet(template, "profileEmail", account->email);
 	templateSet(template, "profileConnect", connectStr);
 	templateSet(template, "accountName", req->account->name);
+	Response* response = responseNew();
 	responseSetStatus(response, OK);
 	responseSetBody(response, templateRender(template));
 	connectionDel(connection);
