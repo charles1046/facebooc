@@ -26,6 +26,8 @@ OBJS = \
 	src/models/post.o \
 	src/server.o
 
+c_codes := $(wildcard include/*.h include/models/*.h src/*.c src/models/*.c)
+
 deps := $(OBJS:%.o=%.o.d)
 
 src/%.o: src/%.c
@@ -36,15 +38,25 @@ $(EXEC): $(OBJS) $(GIT_HOOKS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
 all: $(GIT_HOOKS) $(EXEC)
+
 run: $(EXEC)
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
+
 release: $(OBJS)
 	mkdir -p $(OUT)
 	$(CC) $(CFLAGS) -O3 -s -o $(EXEC) $(OBJS) $(LDFLAGS)
 
+format:
+	@echo start formatting...
+	@for f in $(c_codes); do \
+		clang-format -style=file -i $$f ; \
+	done
+	@echo finish format!
+
 clean:
 	$(RM) $(OBJS) $(EXEC) $(deps)
+
 distclean: clean
 	$(RM) db.sqlite3
 
