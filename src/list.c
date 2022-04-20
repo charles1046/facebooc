@@ -7,8 +7,7 @@
 Node* insert(const void* value, size_t size, const Node* next) {
 	Node* new_node = malloc(sizeof(Node));
 	assert(new_node);
-
-	*(void**)(&new_node->value) = malloc(size);	 // Bypass const
+	new_node->value = malloc(size);	 // Bypass const
 	assert(new_node->value);
 
 	new_node->next = (Node*)next;

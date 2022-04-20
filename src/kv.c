@@ -43,11 +43,13 @@ void kvPrintList(Node* list) {
 	listForEach(list, kvPrintEach);
 }
 
-char* kvFindList(Node* cell, char* key) {
-	while(cell) {
-		if(!strcmp(((KV*)cell->value)->key, key))
-			return ((KV*)cell->value)->value;
-		cell = (Node*)cell->next;
+char* kvFindList(const Node* head, const char* key) {
+	Node* iter = (Node*)head;
+	while(iter) {
+		const KV* item = iter->value;
+		if(!strcmp(item->key, key))
+			return item->value;
+		iter = iter->next;
 	}
 
 	return NULL;

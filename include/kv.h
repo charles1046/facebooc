@@ -5,15 +5,18 @@
 
 #include "list.h"
 
+// TODO: Use container of macro to rewrite this
+// TODO: Use `map' to replace list dependency
 typedef struct KV {
 	char* key;
 	char* value;
 } KV;
 
-KV* kvNew(char*, char*);
+KV* kvNew(char* key, char* value);
 void kvDel(KV*);
-void kvDelList(Node*);
-void kvPrintList(Node*);
-char* kvFindList(Node*, char*);
+// Delete a list which is made by kv
+void kvDelList(Node* head);
+void kvPrintList(Node* head);
+char* kvFindList(const Node* head, const char* key);
 
 #endif

@@ -19,15 +19,15 @@ typedef enum Method {
 } Method;
 
 typedef struct Request {
-	Method method;
+	const Method method;
 
-	char* path;
-	char* uri;
+	const char* path;
+	const char* uri;
 
-	Node* queryString;
-	Node* postBody;
-	Node* cookies;
-	Node* headers;
+	const Node* queryString;
+	const Node* postBody;
+	const Node* cookies;
+	const Node* headers;
 
 	Account* account;  // Don't worry. You're doing fine. Game is hard.
 } Request;
