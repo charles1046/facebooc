@@ -305,7 +305,9 @@ static Response* profile(Request* req) {
 	Node* postPCell = NULL;
 	Node* postCell = postGetLatest(DB, account->id, 0);
 
-	char* res = postCell ? bsNew("<ul class=\"posts\">") : NULL;
+	char* res = NULL;
+	if(postCell)
+		res = bsNew("<ul class=\"posts\">");
 	bool liked;
 	char sbuff[128];
 	char* bbuff = NULL;
