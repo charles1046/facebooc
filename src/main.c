@@ -180,7 +180,9 @@ static Response* dashboard(Request* req) {
 		return responseNewRedirect("/login/");
 
 	ListCell* postCell = postGetLatestGraph(DB, req->account->id, 0);
-	char* res = postCell ? bsNew("<ul class=\"posts\">") : NULL;
+	char* res = NULL;
+	if(postCell)
+		res = bsNew("<ul class=\"posts\">");
 
 	while(postCell) {
 		Post* post = (Post*)postCell->value;
@@ -284,7 +286,9 @@ static Response* profile(Request* req) {
 	ListCell* postPCell = NULL;
 	ListCell* postCell = postGetLatest(DB, account->id, 0);
 
-	char* res = postCell ? bsNew("<ul class=\"posts\">") : NULL;
+	char* res = NULL;
+	if(postCell)
+		res = bsNew("<ul class=\"posts\">");
 	bool liked;
 	char sbuff[128];
 	char* bbuff = NULL;
