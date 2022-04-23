@@ -35,7 +35,7 @@ OBJS = \
 deps := $(OBJS:%.o=%.o.d)
 
 src/%.o: src/%.c
-	$(CC) $(CFLAGS) -o $@ -MMD -MF $@.d -c $<
+	$(CC) $(CFLAGS) -DDEBUG -o $@ -MMD -MF $@.d -c $<
 
 $(EXEC): $(OBJS) $(GIT_HOOKS)
 	mkdir -p $(OUT)

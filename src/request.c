@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#include "bs.h"
 #include "http/http.h"
 #include "kv.h"
 #include "request.h"
@@ -43,8 +43,9 @@ static inline size_t get_uri_len(const char* buf) {
 	while(buf[++cur] != ' ')
 		;
 
-	size_t counter = 1;
-	while(buf[cur++] != ' ')  // end of uri is a space
+	// Start the uri
+	size_t counter = 0;
+	while(buf[++cur] != ' ')  // end of uri is a space
 		++counter;
 
 	return counter;
@@ -70,7 +71,6 @@ static inline _Bool parse_request_line(Request* req, const char* buf, size_t* of
 	// Check version string
 	if(strncmp("HTTP/1.", version, 6))
 		goto fail;
-
 	if(version[7] != '1' && version[7] != '0')
 		goto fail;
 
@@ -91,16 +91,16 @@ fail:
 // Return true for success
 // If no query, always success
 static inline _Bool split_query_string(Request* req) {
-	char* segment = strchr(req->path, '?');
-	if(!segment)  // No query
+	char* begin = strchr(req->path, '?');
+	if(!begin)	// No query
 		return true;
 
-	const size_t uri_len = segment - req->path;
+	const size_t uri_len = begin - req->path;
 	req->uri = malloc(uri_len + 1);	 // split an uri from path
 	memcpy((char*)req->uri, req->path, uri_len);
 	*(char*)(&req->uri[uri_len]) = 0;
 
-	req->queryString = query_parser(segment + 1);
+	req->queryString = query_parser(begin + 1);
 
 	return !!req->queryString;
 }

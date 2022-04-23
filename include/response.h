@@ -64,7 +64,7 @@ Response* responseNewRedirect(char*);
 void responseSetStatus(Response*, Status);
 void responseSetBody(Response*, char*);
 void responseAddCookie(Response*, char*, char*, char*, char*, int);
-void responseAddHeader(Response*, char*, char*);
+void responseAddHeader(Response*, const char*, const char*);
 void responseDel(Response*);
 void responseWrite(Response*, int);
 

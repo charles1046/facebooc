@@ -51,7 +51,9 @@ typedef char sockopt_t;
 				status);                                                                       \
 	} while(0)
 
-char* METHODS[8] = { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT" };
+static char* METHODS[8] = { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT" };
+
+#define min(x, y) ((x) < (y) ? (x) : (y))
 
 #if defined(__linux__)
 #include <sys/epoll.h>
@@ -86,6 +88,32 @@ void serverDel(Server* server) {
 void serverAddHandler(Server* server, Handler handler) {
 	HandlerP handlerP = &handler;
 	server->handlers = insert(handlerP, sizeof(HandlerP), server->handlers);
+}
+
+// compare str1 and str2 from tail
+static inline int rev_cmp(const char* str1, size_t len1, const char* str2, size_t len2) {
+	const long smaller = min(len1, len2);
+	return strncmp(str1 + len1 - smaller, str2 + len2 - smaller, smaller);
+}
+
+static inline const char* mimeType_mux(const char* path) {
+	static const char* file_type[] = {
+		"html", "json", "jpeg", "jpg", "gif", "png", "css", "js",
+	};
+	static const size_t file_type_len = sizeof(file_type) / sizeof(*file_type);
+
+	static const char* mime_type[] = {
+		"text/html", "application/json",	   "image/jpeg", "image/jpeg", "image/gif", "image/png",
+		"text/css",	 "application/javascript", "text/plain",
+	};
+
+	size_t i = 0;
+	for(; i < file_type_len; i++) {
+		if(rev_cmp(path, strlen(path), file_type[i], strlen(file_type[i])) == 0)
+			break;
+	}
+
+	return mime_type[i];
 }
 
 static Response* staticHandler(Request* req) {
@@ -125,26 +153,7 @@ static Response* staticHandler(Request* req) {
 	free(buff);
 
 	// MIME TYPE
-	char* mimeType = "text/plain";
-
-	len = bsGetLen(req->uri);
-
-	if(!strncmp(req->uri + len - 4, "html", 4))
-		mimeType = "text/html";
-	else if(!strncmp(req->uri + len - 4, "json", 4))
-		mimeType = "application/json";
-	else if(!strncmp(req->uri + len - 4, "jpeg", 4))
-		mimeType = "image/jpeg";
-	else if(!strncmp(req->uri + len - 3, "jpg", 3))
-		mimeType = "image/jpeg";
-	else if(!strncmp(req->uri + len - 3, "gif", 3))
-		mimeType = "image/gif";
-	else if(!strncmp(req->uri + len - 3, "png", 3))
-		mimeType = "image/png";
-	else if(!strncmp(req->uri + len - 3, "css", 3))
-		mimeType = "text/css";
-	else if(!strncmp(req->uri + len - 2, "js", 2))
-		mimeType = "application/javascript";
+	const char* mimeType = mimeType_mux(req->uri);
 
 	// RESPOND
 	responseSetStatus(response, OK);

@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
 
 	Server* server = serverNew(server_port);
 	serverAddHandler(server, notFound);
-	serverAddStaticHandler(server);
+	serverAddHandler(server, home);
 	serverAddHandler(server, about);
 	serverAddHandler(server, signup);
 	serverAddHandler(server, logout);
@@ -130,8 +130,8 @@ int main(int argc, char* argv[]) {
 	serverAddHandler(server, post);
 	serverAddHandler(server, profile);
 	serverAddHandler(server, dashboard);
-	serverAddHandler(server, home);
 	serverAddHandler(server, session);
+	serverAddStaticHandler(server);
 	serverServe(server);
 
 	return 0;

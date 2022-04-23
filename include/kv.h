@@ -12,7 +12,7 @@ typedef struct KV {
 	char* value;
 } KV;
 
-KV* kvNew(char* key, char* value);
+KV* kvNew(const char* key, const char* value);
 void kvDel(KV*);
 // Delete a list which is made by kv
 void kvDelList(Node* head);

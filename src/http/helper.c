@@ -1,4 +1,5 @@
 #include "http/helper.h"
+#include <assert.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -6,66 +7,49 @@
 #include <stdlib.h>
 #include <string.h>
 
-void computeLPSArray(const char* pat, size_t M, int* lps);
+#ifdef DEBUG
+#include <stdio.h>
+#endif
 
-size_t KMPSearch(const char* pat, const char* txt) {
-	size_t M = strlen(pat);
-	size_t N = strlen(txt);
-
-	// create lps[] that will hold the longest prefix suffix
-	// values for pattern
-	int* lps = (int*)malloc(sizeof(int) * M);
-	size_t j = 0;  // index for pat[]
-
-	// Preprocess the pattern (calculate lps[] array)
-	computeLPSArray(pat, M, lps);
-
-	size_t i = 0;  // index for txt[]
-	while(i < N) {
-		if(pat[j] == txt[i]) {
-			j++;
-			i++;
-		}
-
-		if(j == M) {
-			return i - j;
-		}
-
-		// mismatch after j matches
-		else if(i < N && pat[j] != txt[i]) {
-			// Do not match lps[0..lps[j-1]] characters,
-			// they will match anyway
-			if(j != 0)
-				j = lps[j - 1];
-			else
-				i = i + 1;
-		}
-	}
-	free(lps);
-	return -1;
+static inline int max(int a, int b) {
+	return a > b ? a : b;
 }
 
-void computeLPSArray(const char* pat, size_t M, int* lps) {
-	int len = 0;  // length of the previous longest prefix suffix
-	lps[0] = 0;
-	size_t i = 1;
+static inline void badCharHeuristic(const char* str, size_t size, char badchar[256]) {
+	memset(badchar, -1, 256);
 
-	while(i < M) {
-		if(pat[i] == pat[len]) {
-			len++;
-			lps[i] = len;
-			i++;
-		}
-		else {
-			if(len != 0) {
-				len = lps[len - 1];
-			}
-			else {
-				lps[i] = 0;
-				i++;
-			}
-		}
+	for(size_t i = 0; i < size; i++)
+		badchar[(int)str[i]] = i;
+}
+
+// pat is non-empty
+// https://www.geeksforgeeks.org/boyer-moore-algorithm-for-pattern-searching/
+// Return NULL if not found
+static char* boyer_moore(const char* txt, const char* pat) {
+	size_t m = strlen(pat);
+	size_t n = strlen(txt);
+
+	/* Quick edge cases. */
+	if(m == 0 || m > n)
+		return NULL;
+	if(m == 1)
+		return strchr(txt, *pat);
+
+	char badchar[256];
+	badCharHeuristic(pat, m, badchar);
+
+	size_t s = 0;
+	while(s <= n - m) {
+		long j = m - 1;
+		while(j >= 0 && pat[j] == txt[s + j])
+			j--;
+		if(j < 0)
+			return (char*)txt + s - 1;
+		else
+			s += max(1, j - badchar[(int)txt[s + j]]);
 	}
+
+	return NULL;
 }
 
 // https://stackoverflow.com/a/14530993
@@ -114,30 +98,39 @@ static inline char* string_view_dup(const struct string_view* const sv) {
 }
 
 void to_lower_case(char* str) {
-	while(*str) {
+	while(str && *str) {
 		*str = tolower(*str);
 		str++;
 	}
 }
 
 struct string_view string_view_ctor(const char* buf, const char* delim) {
-	struct string_view entry;
-	entry.begin = buf;
-	entry.end = find_first_of(buf, delim) + 1;
-	CONST_INIT(entry.size, entry.end - entry.begin);
+	long size = -1;
+	const char* end = find_first_of(buf, delim) + 1;
+	if(end != (void*)1)
+		size = end - buf;
 
-	if(entry.end == NULL) {
-		CONST_INIT(entry.size, -1);
-	}
-	return entry;
+	struct string_view sv = { .begin = buf, .end = end, .size = size };
+	return sv;
 }
 
-// KMP
-// https://riptutorial.com/algorithm/example/23880/kmp-algorithm-in-c
+#ifdef DEBUG
+void string_view_show(const struct string_view* const sv) {
+	if(sv->size == -1)
+		return;
+
+	char* copy = malloc(sv->size + 1);
+	memcpy(copy, sv->begin, sv->size);
+	copy[sv->size] = 0;
+	fprintf(stderr, "%s\n", copy);
+	free(copy);
+}
+#endif
+
+// Return NULL if not found
 char* find_first_of(const char* str, const char* delim) {
-	size_t pos = KMPSearch(str, delim);
-	if(pos)
-		return (char*)(str + pos);
+	if(str && *str)
+		return boyer_moore(str, delim);
 	else
 		return NULL;
 }
@@ -145,12 +138,13 @@ char* find_first_of(const char* str, const char* delim) {
 // Support unicode
 char* url_decoder(const char* str) {
 	// Each '%' symbol will brought another 2 characters behind it
-	size_t percent_counter = 0;
+	int percent_counter = 0;
 	char* shadow_str = (char*)str;
-	while(*shadow_str++)
-		++percent_counter;
+	while((*shadow_str++))
+		if(*shadow_str == '%')
+			++percent_counter;
 
-	char* new_url = malloc(strlen(str) - percent_counter * 2);
+	char* new_url = malloc(strlen(str) - percent_counter * 2 + 1);
 
 	urldecode2(new_url, str);
 	return new_url;
@@ -162,4 +156,14 @@ KV* make_pair(const struct string_view* const key, const struct string_view* con
 	entry->value = string_view_dup(value);
 
 	return entry;
+}
+
+// Case sensitive
+KV* query_entry(const char* str) {
+	const char* seperator = find_first_of(str, "=");
+	struct string_view key = { .begin = str, .end = seperator, .size = seperator - str };
+	struct string_view value = { .begin = seperator + 1,
+								 .end = str + strlen(str) + 1,
+								 .size = strlen(str) - key.size - 1 };
+	return make_pair(&key, &value);
 }
