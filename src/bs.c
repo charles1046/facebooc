@@ -44,7 +44,7 @@ char* bsCat(char* bs1, char* bs2) {
 	return bs;
 }
 
-char* bsSubstr(char* orig, uint32_t beginning, int32_t end) {
+char* bsSubstr(const char* orig, uint32_t beginning, int32_t end) {
 	size_t len = bsGetLen(orig);
 	size_t newLen = (end <= 0) ? len - beginning + end : end - beginning;
 

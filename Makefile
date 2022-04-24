@@ -1,4 +1,4 @@
-CFLAGS = -std=c11 -Wall -Wextra -Werror -I include
+CFLAGS = -std=c11 -Wall -Wextra -Werror -g -I include
 LDFLAGS = -lsqlite3 -lpthread -ldl -lm
 
 UNAME_S = $(shell uname -s)
@@ -24,16 +24,22 @@ OBJS = \
 	src/models/connection.o \
 	src/models/session.o \
 	src/models/post.o \
+	src/http/header.o \
+	src/http/body.o \
+	src/http/cookies.o \
+	src/http/helper.o \
+	src/http/query.o \
+	src/http/http.o \
 	src/server.o
 
 deps := $(OBJS:%.o=%.o.d)
 
 src/%.o: src/%.c
-	$(CC) $(CFLAGS) -o $@ -MMD -MF $@.d -c $<
+	$(CC) $(CFLAGS) -DDEBUG -o $@ -MMD -MF $@.d -c $<
 
 $(EXEC): $(OBJS) $(GIT_HOOKS)
 	mkdir -p $(OUT)
-	$(CC) $(OBJS) -o $@ $(LDFLAGS)
+	$(CC) $(OBJS) -fsanitize=address -g -o $@ $(LDFLAGS)
 
 all: $(GIT_HOOKS) $(EXEC)
 run: $(EXEC)

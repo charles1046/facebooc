@@ -11,7 +11,7 @@
 char* bsNew(const char*);
 char* bsNewLen(char*, size_t);
 char* bsCat(char*, char*);
-char* bsSubstr(char*, uint32_t, int32_t);
+char* bsSubstr(const char*, uint32_t, int32_t);
 char* bsRandom(uint32_t, char*);
 char* bsEscape(char*);
 char* bsNewline2BR(const char*);

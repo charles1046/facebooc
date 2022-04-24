@@ -96,7 +96,7 @@ void responseAddCookie(Response* response, char* key, char* value, char* domain,
 	responseAddHeader(response, "Set-Cookie", cbuff);
 }
 
-void responseAddHeader(Response* response, char* key, char* value) {
+void responseAddHeader(Response* response, const char* key, const char* value) {
 	response->headers = insert(kvNew(key, value), sizeof(KV), response->headers);
 }
 
