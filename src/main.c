@@ -373,9 +373,9 @@ static Response* post(Request* req) {
 
 	char* postStr = kvFindList(req->postBody, "post");
 
-	if(bsGetLen(postStr) == 0)
+	if(strlen(postStr) == 0)
 		return responseNewRedirect("/dashboard/");
-	else if(bsGetLen(postStr) < MAX_BODY_LEN)
+	else if(strlen(postStr) < MAX_BODY_LEN)
 		postDel(postCreate(DB, req->account->id, postStr));
 
 	return responseNewRedirect("/dashboard/");
