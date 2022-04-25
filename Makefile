@@ -52,11 +52,11 @@ run: $(EXEC) shell_hook
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
 
-pre_release: $(OBJS)
+before_release: $(OBJS)
 	mkdir -p $(OUT)
 	$(CC) $(CFLAGS) -O3 -s -o $(EXEC) $(OBJS) $(LDFLAGS)
 
-release: pre_release shell_hook
+release: before_release shell_hook
 
 format:
 	@echo start formatting...
