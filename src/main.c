@@ -703,12 +703,8 @@ static inline int get_id(const char* uri) {
 	char* end = strchr(begin, '/');
 	const size_t len = end - begin;
 
-	char* new_str = malloc(len + 1);
+	char new_str[10] = { 0 };
 	memcpy(new_str, begin, len);
-	new_str[len] = 0;
 
-	const int id = atoi(new_str);
-	free(new_str);
-
-	return id;
+	return atoi(new_str);
 }
