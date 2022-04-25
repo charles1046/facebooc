@@ -41,7 +41,7 @@ run: $(EXEC) shell_hook
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
 
-release: $(OBJS)
+before_release: $(OBJS)
 	mkdir -p $(OUT)
 	$(CC) $(CFLAGS) -O3 -s -o $(EXEC) main.c $(OBJS) $(LDFLAGS)
 
@@ -53,7 +53,7 @@ test: $(TEST_UNIT_OBJ)
 	@python3 tests/driver.py
 	@echo done
 
-release: pre_release shell_hook
+release: before_release shell_hook
 
 format:
 	@echo start formatting...
