@@ -143,3 +143,5 @@ CI
 foreach
 Makefile
 scc
+malloc
+ascii
