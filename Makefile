@@ -46,7 +46,7 @@ $(EXEC): $(OBJS) $(GIT_HOOKS)
 all: $(GIT_HOOKS) $(EXEC)
 
 shell_hook: $(EXEC)
-	@scripts/auto-gen-footer.sh
+	@scripts/auto-update-html.sh
 
 run: $(EXEC) shell_hook
 	@echo "Starting Facebooc service..."
@@ -67,7 +67,7 @@ format:
 
 clean:
 	$(RM) $(OBJS) $(EXEC) $(deps)
-	$(RM) templates/footer.html
+	$(RM) templates/version.html
 
 distclean: clean
 	$(RM) db.sqlite3
