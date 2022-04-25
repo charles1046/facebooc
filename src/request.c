@@ -95,10 +95,10 @@ static inline _Bool split_query_string(Request* req) {
 	if(!begin)	// No query
 		return true;
 
-	const size_t qs_len = begin - req->path;
-	req->uri = malloc(qs_len + 1);	// split an uri from path
-	memcpy((char*)req->uri, begin + 1, qs_len);
-	*(char*)(&req->uri[qs_len]) = 0;
+	const size_t new_uri_len = begin - req->path;
+	req->uri = malloc(new_uri_len + 1);	 // split an uri from path
+	memcpy((char*)req->uri, req->path, new_uri_len);
+	CONST_INIT(req->uri[new_uri_len], (char)0);
 
 	req->queryString = query_parser(begin + 1);
 

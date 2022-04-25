@@ -14,7 +14,7 @@ Session* sessionNew(int id, int createdAt, int accountId, char* sessionId) {
 	return session;
 }
 
-Session* sessionGetBySId(sqlite3* DB, char* sid) {
+Session* sessionGetBySId(sqlite3* DB, const char* sid) {
 	Session* session = NULL;
 	sqlite3_stmt* statement;
 
