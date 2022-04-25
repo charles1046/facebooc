@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <signal.h>
 #include <sqlite3.h>
 #include <stdio.h>
@@ -35,6 +36,7 @@ static Response* logout(Request*);
 static Response* signup(Request*);
 static Response* about(Request*);
 static Response* notFound(Request*);
+static inline int get_id(const char* uri);
 
 int main(int argc, char* argv[]) {
 	if(signal(SIGINT, sig) == SIG_ERR || signal(SIGTERM, sig) == SIG_ERR) {
@@ -269,10 +271,9 @@ static Response* profile(Request* req) {
 	if(!req->account)
 		return NULL;
 
-	int id = -1;
-	int idStart = strchr(req->uri + 1, '/') + 1 - req->uri;
-	char* idStr = bsSubstr(req->uri, idStart, -1);
-	sscanf(idStr, "%d", &id);
+	const int id = get_id(req->uri);
+	char id_str[10] = { 0 };
+	snprintf(id_str, 10, "%d", id);
 
 	Account* account = accountGetById(DB, id);
 
@@ -295,12 +296,6 @@ static Response* profile(Request* req) {
 				 " <a href=\"/connect/%d/\">Click here</a> to connect!",
 				 account->name, account->id);
 	}
-
-	char* res = NULL;
-	char sbuff[128];
-	char* bbuff = NULL;
-	time_t t;
-	bool liked;
 
 	Node* postPCell = NULL;
 	Node* postCell = postGetLatest(DB, account->id, 0);
@@ -357,7 +352,7 @@ static Response* profile(Request* req) {
 	templateSet(template, "active", "profile");
 	templateSet(template, "loggedIn", "t");
 	templateSet(template, "subtitle", account->name);
-	templateSet(template, "profileId", idStr);
+	templateSet(template, "profileId", id_str);
 	templateSet(template, "profileName", account->name);
 	templateSet(template, "profileEmail", account->email);
 	templateSet(template, "profileConnect", connectStr);
@@ -367,7 +362,6 @@ static Response* profile(Request* req) {
 	responseSetBody(response, templateRender(template));
 	connectionDel(connection);
 	accountDel(account);
-	bsDel(idStr);
 	templateDel(template);
 	return response;
 }
@@ -394,11 +388,7 @@ static Response* unlike(Request* req) {
 	if(!req->account)
 		return NULL;
 
-	int id = -1;
-	int idStart = strchr(req->uri + 1, '/') + 1 - req->uri;
-	char* idStr = bsSubstr(req->uri, idStart, -1);
-
-	sscanf(idStr, "%d", &id);
+	const int id = get_id(req->uri);
 
 	Post* post = postGetById(DB, id);
 	if(!post)
@@ -409,12 +399,10 @@ static Response* unlike(Request* req) {
 	if(kvFindList(req->queryString, "r")) {
 		char sbuff[1024];
 		snprintf(sbuff, 21, "/profile/%d/", post->authorId);
-		bsDel(idStr);
 		return responseNewRedirect(sbuff);
 	}
 
 fail:
-	bsDel(idStr);
 	return responseNewRedirect("/dashboard/");
 }
 
@@ -424,11 +412,7 @@ static Response* like(Request* req) {
 	if(!req->account)
 		return NULL;
 
-	int id = -1;
-	int idStart = strchr(req->uri + 1, '/') + 1 - req->uri;
-	char* idStr = bsSubstr(req->uri, idStart, -1);
-
-	sscanf(idStr, "%d", &id);
+	const int id = get_id(req->uri);
 
 	Post* post = postGetById(DB, id);
 	if(!post)
@@ -438,13 +422,11 @@ static Response* like(Request* req) {
 
 	if(kvFindList(req->queryString, "r")) {
 		char sbuff[1024];
-		snprintf(sbuff, 11 + strlen(post->authorId), "/profile/%d/", post->authorId);
-		bsDel(idStr);
+		snprintf(sbuff, 21, "/profile/%d/", post->authorId);
 		return responseNewRedirect(sbuff);
 	}
 
 fail:
-	bsDel(idStr);
 	return responseNewRedirect("/dashboard/");
 }
 
@@ -453,11 +435,7 @@ static Response* connect(Request* req) {
 	if(!req->account)
 		return NULL;
 
-	int id = -1;
-	int idStart = strchr(req->uri + 1, '/') + 1 - req->uri;
-	char* idStr = bsSubstr(req->uri, idStart, -1);
-
-	sscanf(idStr, "%d", &id);
+	const int id = get_id(req->uri);
 
 	Account* account = accountGetById(DB, id);
 	if(!account)
@@ -467,11 +445,9 @@ static Response* connect(Request* req) {
 
 	char sbuff[1024];
 	snprintf(sbuff, 21, "/profile/%d/", account->id);
-	bsDel(idStr);
 	return responseNewRedirect(sbuff);
 
 fail:
-	bsDel(idStr);
 	return responseNewRedirect("/dashboard/");
 }
 
@@ -717,4 +693,22 @@ static Response* notFound(Request* req) {
 	responseSetBody(response, templateRender(template));
 	templateDel(template);
 	return response;
+}
+
+// Be careful, you should free it by yourself
+static inline int get_id(const char* uri) {
+	// format: "/%s/<id>/"
+
+	char* begin = strchr(uri + 1, '/') + 1;
+	char* end = strchr(begin, '/');
+	const size_t len = end - begin;
+
+	char* new_str = malloc(len + 1);
+	memcpy(new_str, begin, len);
+	new_str[len] = 0;
+
+	const int id = atoi(new_str);
+	free(new_str);
+
+	return id;
 }
