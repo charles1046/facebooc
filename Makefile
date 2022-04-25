@@ -12,27 +12,16 @@ CFLAGS += -D_POSIX_C_SOURCE=199506L
 OUT = bin
 EXEC = $(OUT)/facebooc
 OBJS = \
-	src/kv.o \
-	src/response.o \
-	src/template.o \
-	src/main.o \
-	src/bs.o \
-	src/request.o \
-	src/list.o \
-	src/models/like.o \
-	src/models/account.o \
-	src/models/connection.o \
-	src/models/session.o \
-	src/models/post.o \
-	src/http/header.o \
-	src/http/body.o \
-	src/http/cookies.o \
-	src/http/helper.o \
-	src/http/query.o \
-	src/http/http.o \
-	src/server.o
+	$(patsubst src/%.c,src/%.o, $(wildcard src/*.c) \
+								$(wildcard src/models/*.c) \
+								$(wildcard src/http/*.c))
 
-c_codes := $(wildcard include/*.h include/models/*.h src/*.c src/models/*.c)
+TEST_UNIT_OBJ = \
+	$(patsubst tests/%.c,tests/%.o, $(wildcard tests/http/*.c))
+
+TEST_UNIT = $(wildcard tests/http/*.o)
+
+c_codes := $(wildcard include/*.h include/models/*.h src/*.c src/models/*.c tests/http/*.c)
 
 deps := $(OBJS:%.o=%.o.d)
 
@@ -41,9 +30,9 @@ src/%.o: src/%.c
 
 $(EXEC): $(OBJS) $(GIT_HOOKS)
 	mkdir -p $(OUT)
-	$(CC) $(OBJS) -fsanitize=address -g -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) main.c $(OBJS) -fsanitize=address -g -o $@ $(LDFLAGS)
 
-all: $(GIT_HOOKS) $(EXEC)
+all: $(GIT_HOOKS) $(EXEC) main.c
 
 run: $(EXEC)
 	@echo "Starting Facebooc service..."
@@ -51,7 +40,15 @@ run: $(EXEC)
 
 release: $(OBJS)
 	mkdir -p $(OUT)
-	$(CC) $(CFLAGS) -O3 -s -o $(EXEC) $(OBJS) $(LDFLAGS)
+	$(CC) $(CFLAGS) -O3 -s -o $(EXEC) main.c $(OBJS) $(LDFLAGS)
+
+tests/%.o: tests/%.c $(OBJS)
+	$(CC) $(CFLAGS) $< $(OBJS) -fsanitize=address -g -o $@ $(LDFLAGS)
+
+test: $(TEST_UNIT_OBJ)
+	@echo Do testing...
+	@python3 tests/driver.py
+	@echo done
 
 format:
 	@echo start formatting...
@@ -61,7 +58,7 @@ format:
 	@echo finish format!
 
 clean:
-	$(RM) $(OBJS) $(EXEC) $(deps)
+	$(RM) $(OBJS) $(TEST_UNIT) $(TEST_UNIT_OBJ) $(EXEC) $(deps)
 
 distclean: clean
 	$(RM) db.sqlite3
