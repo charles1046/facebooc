@@ -5,9 +5,11 @@ WORKDIR /app
 RUN apt-get update -y && \
     apt-get install -y libsqlite3-dev \
     build-essential
-COPY ["Makefile", "/app/"]
+COPY ["Makefile", "main.c", "/app/"]
 COPY ["src", "/app/src/"]
 COPY ["include", "/app/include/"]
+COPY ["scripts","/app/scripts"]
+COPY ["templates", "/app/templates/"]
 RUN make release
 
 FROM debian:latest
@@ -22,5 +24,6 @@ COPY ["static", "/app/static/"]
 COPY ["templates", "/app/templates/"]
 
 COPY --from=build --chown=1000:1000 /app/bin/facebooc /app/facebooc
+COPY --from=build --chown=1000:1000 /app/templates/version.html /app/templates/
 USER 1000
 CMD /app/facebooc ${port}
