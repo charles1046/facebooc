@@ -145,3 +145,4 @@ Makefile
 scc
 malloc
 ascii
+mst
