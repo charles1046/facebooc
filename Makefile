@@ -45,13 +45,18 @@ $(EXEC): $(OBJS) $(GIT_HOOKS)
 
 all: $(GIT_HOOKS) $(EXEC)
 
-run: $(EXEC)
+shell_hook: $(EXEC)
+	@scripts/auto-gen-footer.sh
+
+run: $(EXEC) shell_hook
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
 
-release: $(OBJS)
+pre_release: $(OBJS)
 	mkdir -p $(OUT)
 	$(CC) $(CFLAGS) -O3 -s -o $(EXEC) $(OBJS) $(LDFLAGS)
+
+release: pre_release shell_hook
 
 format:
 	@echo start formatting...
@@ -62,6 +67,7 @@ format:
 
 clean:
 	$(RM) $(OBJS) $(EXEC) $(deps)
+	$(RM) templates/footer.html
 
 distclean: clean
 	$(RM) db.sqlite3
