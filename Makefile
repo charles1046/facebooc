@@ -34,10 +34,10 @@ $(EXEC): $(OBJS) $(GIT_HOOKS)
 
 all: $(GIT_HOOKS) $(EXEC) main.c
 
-footer-updater: $(EXEC)
+html-updater: $(EXEC)
 	@scripts/auto-update-html.sh
 
-run: $(EXEC) footer-updater
+run: $(EXEC) html-updater
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
 
@@ -53,7 +53,7 @@ test: $(TEST_UNIT_OBJ)
 	@python3 tests/driver.py
 	@echo done
 
-release: before_release shell_hook
+release: before_release html-updater
 
 format:
 	@echo start formatting...
