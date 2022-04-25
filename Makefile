@@ -28,11 +28,11 @@ deps := $(OBJS:%.o=%.o.d)
 src/%.o: src/%.c
 	$(CC) $(CFLAGS) -DDEBUG -o $@ -MMD -MF $@.d -c $<
 
-$(EXEC): $(OBJS) $(GIT_HOOKS)
+all: $(GIT_HOOKS) $(EXEC) main.c
+
+$(EXEC): $(OBJS)
 	mkdir -p $(OUT)
 	$(CC) $(CFLAGS) main.c $(OBJS) -fsanitize=address -g -o $@ $(LDFLAGS)
-
-all: $(GIT_HOOKS) $(EXEC) main.c
 
 html-updater: $(EXEC)
 	@scripts/auto-update-html.sh

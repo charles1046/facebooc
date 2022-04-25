@@ -8,6 +8,8 @@ RUN apt-get update -y && \
 COPY ["Makefile", "main.c", "/app/"]
 COPY ["src", "/app/src/"]
 COPY ["include", "/app/include/"]
+COPY ["scripts","/app/scripts"]
+COPY ["templates", "/app/templates/"]
 RUN make release
 
 FROM debian:latest
