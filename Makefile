@@ -34,11 +34,14 @@ $(EXEC): $(OBJS) $(GIT_HOOKS)
 
 all: $(GIT_HOOKS) $(EXEC) main.c
 
-run: $(EXEC)
+footer-updater: $(EXEC)
+	@scripts/auto-update-html.sh
+
+run: $(EXEC) footer-updater
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
 
-release: $(OBJS)
+before_release: $(OBJS)
 	mkdir -p $(OUT)
 	$(CC) $(CFLAGS) -O3 -s -o $(EXEC) main.c $(OBJS) $(LDFLAGS)
 
@@ -50,6 +53,8 @@ test: $(TEST_UNIT_OBJ)
 	@python3 tests/driver.py
 	@echo done
 
+release: before_release shell_hook
+
 format:
 	@echo start formatting...
 	@for f in $(c_codes); do \
@@ -59,6 +64,7 @@ format:
 
 clean:
 	$(RM) $(OBJS) $(TEST_UNIT) $(TEST_UNIT_OBJ) $(EXEC) $(deps)
+	$(RM) templates/version.html
 
 distclean: clean
 	$(RM) db.sqlite3
