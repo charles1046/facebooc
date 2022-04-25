@@ -3,15 +3,17 @@ name: status-checks
 on: [push, pull_request]
 
 jobs:
-  validate:
+  Validate:
     runs-on: ubuntu-20.04
     steps:
       - name: checkout code
         uses: actions/checkout@v2
       - name: Validate coding style and functionality
         run: |
-            sudo apt-get install -q -y clang-format-11
-            sudo apt-get install -q -y cppcheck
-            sudo apt-get install -q -y gcc-10
-            .ci/check-status.sh
+            sudo apt-get update
+            sudo apt-get install -q -y clang-format-11 gcc-10 cppcheck python3 build-essential
+            .ci/check-status.sh || exit 1
+      - name: make test
+        run: |
+            make test
         shell: bash
