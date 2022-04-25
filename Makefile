@@ -45,13 +45,18 @@ $(EXEC): $(OBJS) $(GIT_HOOKS)
 
 all: $(GIT_HOOKS) $(EXEC)
 
-run: $(EXEC)
+shell_hook: $(EXEC)
+	@scripts/auto-update-html.sh
+
+run: $(EXEC) shell_hook
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
 
-release: $(OBJS)
+before_release: $(OBJS)
 	mkdir -p $(OUT)
 	$(CC) $(CFLAGS) -O3 -s -o $(EXEC) $(OBJS) $(LDFLAGS)
+
+release: before_release shell_hook
 
 format:
 	@echo start formatting...
@@ -62,6 +67,7 @@ format:
 
 clean:
 	$(RM) $(OBJS) $(EXEC) $(deps)
+	$(RM) templates/version.html
 
 distclean: clean
 	$(RM) db.sqlite3
