@@ -5,11 +5,11 @@ WORKDIR /app
 RUN apt-get update -y && \
     apt-get install -y libsqlite3-dev \
     build-essential
-COPY ["Makefile", "main.c", "/app/"]
-COPY ["src", "/app/src/"]
-COPY ["include", "/app/include/"]
-COPY ["scripts","/app/scripts"]
 COPY ["templates", "/app/templates/"]
+COPY ["scripts","/app/scripts"]
+COPY ["include", "/app/include/"]
+COPY ["src", "/app/src/"]
+COPY ["Makefile", "main.c", "/app/"]
 RUN make release
 
 FROM debian:latest
