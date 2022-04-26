@@ -5,9 +5,11 @@ WORKDIR /app
 RUN apt-get update -y && \
     apt-get install -y libsqlite3-dev \
     build-essential
-COPY ["Makefile", "main.c", "/app/"]
-COPY ["src", "/app/src/"]
+COPY ["templates", "/app/templates/"]
+COPY ["scripts","/app/scripts"]
 COPY ["include", "/app/include/"]
+COPY ["src", "/app/src/"]
+COPY ["Makefile", "main.c", "/app/"]
 RUN make release
 
 FROM node:alpine as scss-compiler
@@ -26,8 +28,7 @@ WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y libsqlite3-dev && \
     mkdir /data && touch ${DB_PATH} && chmod 600 ${DB_PATH} && chown -R 1000:1000 /data
-COPY ["static/image", "/app/static/image/"]
-COPY ["static/css_old", "/app/static/css_old/"]
+COPY ["static", "/app/static/"]
 COPY ["templates", "/app/templates/"]
 
 COPY --from=build --chown=1000:1000 /app/bin/facebooc /app/facebooc
