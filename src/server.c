@@ -1,11 +1,12 @@
-#ifndef _WIN32
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -13,64 +14,28 @@
 #include <time.h>
 #include <unistd.h>
 typedef int sockopt_t;
-#else
-#define FD_SETSIZE 4096
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <time.h>
-#include <unistd.h>
-#include <ws2tcpip.h>
-#undef DELETE
-#undef close
-#define close(x) closesocket(x)
-typedef char sockopt_t;
-#endif
 
 #include "bs.h"
 #include "server.h"
 
-#define GET_TIME           \
-	time_t t = time(NULL); \
-	char timebuff[100];    \
-	strftime(timebuff, sizeof(timebuff), "%c", localtime(&t));
-
-#define LOG_400(addr)                                                        \
-	do {                                                                     \
-		GET_TIME;                                                            \
-		fprintf(stdout, "%s %s 400\n", timebuff, inet_ntoa(addr->sin_addr)); \
-	} while(0)
-
-#define LOG_REQUEST(addr, method, path, status)                                                \
-	do {                                                                                       \
-		GET_TIME;                                                                              \
-		fprintf(stdout, "%s %s %s %s %d\n", timebuff, inet_ntoa(addr->sin_addr), method, path, \
-				status);                                                                       \
-	} while(0)
+#define min(x, y) ((x) < (y) ? (x) : (y))
 
 static char* METHODS[8] = { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT" };
 
-#define min(x, y) ((x) < (y) ? (x) : (y))
+static const int EPOLL_NUM = 64;
 
-#if defined(__linux__)
-#include <sys/epoll.h>
-#elif defined(__APPLE__)
-#include <sys/event.h>
-#else
-#error Unsupported platform
-#endif
+static inline void pop_log(const struct sockaddr_in* addr, const char* method, const char* path,
+						   int status) {
+	time_t t = time(NULL);
+	char timebuff[100];
+	strftime(timebuff, sizeof(timebuff), "%c", localtime(&t));
+	fprintf(stdout, "%s %s %s %s %d\n", timebuff, inet_ntoa(addr->sin_addr), method, path, status);
+}
 
 Server* serverNew(uint16_t port) {
 	Server* server = malloc(sizeof(Server));
 	server->port = port;
-#if defined(__linux__)
 	server->priv = epoll_create1(0);
-#elif defined(__APPLE__)
-	server->priv = kqueue();
-#endif
 	server->handlers = NULL;
 	return server;
 }
@@ -79,10 +44,6 @@ void serverDel(Server* server) {
 	if(server->handlers)
 		clear(server->handlers);
 	free(server);
-
-#ifdef _WIN32
-	WSACleanup();
-#endif
 }
 
 void serverAddHandler(Server* server, Handler handler) {
@@ -200,8 +161,7 @@ static void setFdNonblocking(int fd) {
 		perror("fcntl");
 }
 
-static void serverAddFd(int epollfd, int fd, int in, int oneshot) {
-#if defined(__linux__)
+static void serverAddFd(int epollfd, int fd, int in, _Bool oneshot) {
 	struct epoll_event event;
 	event.data.fd = fd;
 	event.events = EPOLLET | EPOLLRDHUP;
@@ -210,49 +170,20 @@ static void serverAddFd(int epollfd, int fd, int in, int oneshot) {
 		event.events |= EPOLLONESHOT;
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event) < 0)
 		perror("epoll_ctl");
-#elif defined(__APPLE__)
-	struct kevent event;
-	event.ident = fd;
-	event.flags = EV_ADD | EV_ENABLE | EV_CLEAR;
-	if(oneshot)
-		event.flags |= EV_ONESHOT;
-	EV_SET(&event, fd, EVFILT_READ, event.flags, 0, 0, NULL);
-	if(kevent(epollfd, &event, 1, NULL, 0, NULL) < 0) {
-		perror("kevent");
-	}
-#endif
 	setFdNonblocking(fd);
 }
 
 static void resetOneShot(int epollfd, int fd) {
-#if defined(__linux__)
 	struct epoll_event event;
 	event.data.fd = fd;
 	event.events = EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLONESHOT;
 	if(epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event) < 0)
 		perror("epoll_ctl");
-#elif defined(__APPLE__)
-	struct kevent event;
-	event.ident = fd;
-	event.flags = EV_ADD | EV_ENABLE | EV_CLEAR | EV_ONESHOT;
-	EV_SET(&event, fd, EVFILT_READ, event.flags, 0, 0, NULL);
-	if(kevent(epollfd, &event, 1, NULL, 0, NULL) < 0) {
-		perror("kevent");
-	}
-#endif
 }
 
 static void serverDelFd(Server* server, int fd) {
-#if defined(__linux__)
 	if(epoll_ctl(server->priv, EPOLL_CTL_DEL, fd, NULL) < 0)
 		perror("epoll_ctl");
-#elif defined(__APPLE__)
-	struct kevent event;
-	EV_SET(&event, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-	if(kevent(server->priv, &event, 1, NULL, 0, NULL) != -1) {
-		perror("kevent");
-	}
-#endif
 }
 
 static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
@@ -274,7 +205,7 @@ static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
 
 		if(!req) {
 			send(fd, "HTTP/1.0 400 Bad Request\r\n\r\nBad Request", 39, 0);
-			LOG_400(addr);
+			pop_log(addr, "", "", 400);
 		}
 		else {
 			Node* handler = server->handlers;
@@ -287,10 +218,10 @@ static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
 
 			if(!response) {
 				send(fd, "HTTP/1.0 404 Not Found\r\n\r\nNot Found!", 36, 0);
-				LOG_REQUEST(addr, METHODS[req->method], req->path, 404);
+				pop_log(addr, METHODS[req->method], req->path, 404);
 			}
 			else {
-				LOG_REQUEST(addr, METHODS[req->method], req->path, response->status);
+				pop_log(addr, METHODS[req->method], req->path, response->status);
 
 				responseWrite(response, fd);
 				responseDel(response);
@@ -304,43 +235,24 @@ static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
 }
 
 void serverServe(Server* server) {
-#ifdef _WIN32
-	WSADATA wsaData;
-	WSAStartup(2, &wsaData);
-#endif
+	const int sock = makeSocket(server->port);
+	struct epoll_event* events = malloc(sizeof(struct epoll_event) * EPOLL_NUM);
 
-	int sock = makeSocket(server->port);
-	int newSock, nfds, tmpfd;
-	struct sockaddr_in addr;
-#if defined(__linux__)
-	struct epoll_event* events = (struct epoll_event*)malloc(sizeof(struct epoll_event) * 64);
-	struct epoll_event event;
-#elif defined(__APPLE__)
-	struct kevent* events = (struct kevent*)malloc(sizeof(struct kevent) * 64);
-	struct kevent event;
-#endif
-
-	serverAddFd(server->priv, sock, 1, 0);
+	serverAddFd(server->priv, sock, 1, false);
 
 	fprintf(stdout, "Listening on port %d.\n\n", server->port);
 
 	for(;;) {
-#if defined(__linux__)
-		nfds = epoll_wait(server->priv, events, 64, -1);
-#elif defined(__APPLE__)
-		nfds = kevent(server->priv, NULL, 0, events, 64, NULL);
-#endif
+		const int nfds = epoll_wait(server->priv, events, EPOLL_NUM, -1);
 		for(int i = 0; i < nfds; ++i) {
-			event = events[i];
-#if defined(__linux__)
-			tmpfd = event.data.fd;
-#elif defined(__APPLE__)
-			tmpfd = (int)event.ident;
-#endif
+			struct epoll_event event = events[i];
+			const int tmpfd = event.data.fd;
+			struct sockaddr_in addr;
 			if(tmpfd == sock) {
 				socklen_t size = sizeof(addr);
+				int newSock = 0;
 				while((newSock = accept(sock, (struct sockaddr*)&addr, &size)) > 0) {
-					serverAddFd(server->priv, newSock, 1, 1);
+					serverAddFd(server->priv, newSock, 1, true);
 				}
 				if(newSock == -1) {
 					if(errno != EAGAIN && errno != ECONNABORTED && errno != EPROTO
