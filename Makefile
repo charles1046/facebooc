@@ -1,6 +1,11 @@
 CFLAGS = -std=c11 -Wall -Wextra -Werror -g -I include
 LDFLAGS = -lsqlite3 -lpthread -ldl -lm
 
+# strtok_r is provided by POSIX.1c-1995 and POSIX.1i-1995, however, with
+# the POSIX_C_SOURCE=1 on Mac OS X is corresponding to the version of
+# 1988 which is too old (defined in sys/cdefs.h)
+CFLAGS += -D_POSIX_C_SOURCE=199506L
+
 UNAME_S = $(shell uname -s)
 GIT_HOOKS := .git/hooks/applied
 
@@ -53,7 +58,7 @@ release: before_release html-updater
 format:
 	@echo start formatting...
 	@for f in $(c_codes); do \
-		clang-format -style=file -i $$f ; \
+		clang-format -i $$f ; \
 	done
 	@echo finish format!
 

@@ -37,7 +37,7 @@ Node* cookies_parser(const Node* header) {
 		}
 
 		// Check if it have '='
-		if(strchr(str, '=')) {	// transfter url encoding
+		if(strchr(str, '=')) {	// transfer url encoding
 			char* decoded = url_decoder(str);
 			KV* entry = query_entry(decoded);
 			cookies = insert(entry, sizeof(*entry), cookies);

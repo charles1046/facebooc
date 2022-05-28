@@ -40,6 +40,7 @@
  */
 
 #include "rbtree.h"
+#include <stdlib.h>
 
 /** Node colour black */
 #define BLACK 0
@@ -71,10 +72,8 @@ static void rbtree_delete_fixup(rbtree_t* rbtree, rbnode_t* child, rbnode_t* chi
  *
  */
 rbtree_t* rbtree_create(int (*cmpf)(const void*, const void*)) {
-	rbtree_t* rbtree;
-
 	/* Allocate memory for it */
-	rbtree = (rbtree_t*)malloc(sizeof(rbtree_t));
+	rbtree_t* rbtree = (rbtree_t*)malloc(sizeof(rbtree_t));
 	if(!rbtree) {
 		return NULL;
 	}
@@ -590,19 +589,4 @@ static void traverse_post(void (*func)(rbnode_t*, void*), void* arg, rbnode_t* n
 
 void traverse_postorder(rbtree_t* tree, void (*func)(rbnode_t*, void*), void* arg) {
 	traverse_post(func, arg, tree->root);
-}
-
-rbnode_t* gen_node__(const void* data, size_t size) {
-	rbnode_t* node = malloc(sizeof(rbnode_t));
-	memcpy(node, &rbtree_null_node, sizeof(rbnode_t));
-	memcpy((void*)node->key, data, size);
-	return node;
-}
-
-rbnode_t* gen_node_move__(void* data) {
-	rbnode_t* node = malloc(sizeof(rbnode_t));
-	memcpy(node, &rbtree_null_node, sizeof(rbnode_t));
-	node->key = data;
-	data = NULL;
-	return node;
 }

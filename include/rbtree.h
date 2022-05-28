@@ -116,6 +116,15 @@ void rbtree_init(rbtree_t* rbtree, int (*cmpf)(const void*, const void*));
 rbnode_t* rbtree_insert(rbtree_t* rbtree, rbnode_t* data);
 
 /**
+ * Delete element from tree.
+ * @param rbtree: tree to delete from.
+ * @param key: key of item to delete.
+ * @return: node that is now unlinked from the tree. User to delete it.
+ * returns 0 if node not present
+ */
+rbnode_t* rbtree_delete(rbtree_t* rbtree, const void* key);
+
+/**
  * Find key in tree. Returns NULL if not found.
  * @param rbtree: tree to find in.
  * @param key: key that must match.
@@ -166,9 +175,9 @@ rbnode_t* rbtree_previous(rbnode_t* rbtree);
  * Call with node=variable of struct* with rbnode_t as first element.
  * with type is the type of a pointer to that struct.
  */
-#define RBTREE_FOR(node, type, rbtree)                                     \
-	for(node = (type)rbtree_first(rbtree); (rbnode_t*)node != RBTREE_NULL; \
-		node = (type)rbtree_next((rbnode_t*)node))
+#define RBTREE_FOR(node, type, rbtree)                                      \
+	for(node = (type*)rbtree_first(rbtree); (rbnode_t*)node != RBTREE_NULL; \
+		node = (type*)rbtree_next((rbnode_t*)node))
 
 /**
  * Call function for all elements in the redblack tree, such that
@@ -182,82 +191,5 @@ rbnode_t* rbtree_previous(rbnode_t* rbtree);
  * @param arg: user argument.
  */
 void traverse_postorder(rbtree_t* tree, void (*func)(rbnode_t*, void*), void* arg);
-
-// An inheritance from self-defined object
-#include "vTable.h"
-// tree_t_t->entry is a rbtree_t
-#define get_actual_data(tree_t_t) (tree_t_t->entry->root->key)
-rbnode_t* gen_node__(const void* data, size_t size);
-rbnode_t* gen_node_move__(void* data);
-
-#define decl_rbtree(T1, T2)                                                                     \
-	decl_Pair(T1, T2);                                                                          \
-	typedef struct Rbtree_##T1_##T2 Rbtree_##T1_##T2;                                           \
-	struct Rbtree_##T1_##T2 {                                                                   \
-		rbtree_t* entry;                                                                        \
-	};                                                                                          \
-	int default_cmp_##T1_##T2(const void* a, const void* b) {                                   \
-		const Pair_##T1_##T2* a_ = (const Pair_##T1_##T2*)a;                                    \
-		const Pair_##T1_##T2* b_ = (const Pair_##T1_##T2*)b;                                    \
-		return Pair_cmp_##T1_##T2(a_->key, b_->key);                                            \
-	}                                                                                           \
-                                                                                                \
-	inline Rbtree_##T1_##T2* new_Rbtree_##T1_##T2(int (*cmp)(const void* a, const void* b)) {   \
-		Rbtree_##T1_##T2* tree = malloc(sizeof(Rbtree_##T1_##T2));                              \
-		tree->entry = rbtree_create(cmp);                                                       \
-		return tree;                                                                            \
-	}                                                                                           \
-	/*You should have a Rbtree first */                                                         \
-	/*You can create it via new_Rbtree_##typename */                                            \
-	inline Rbtree_##T1_##T2* insert_Rbtree_##T1_##T2(Rbtree_##T1_##T2* root,                    \
-													 const Pair_##T1_##T2* p) {                 \
-		if(!root || !root->entry)                                                               \
-			return NULL;                                                                        \
-		rbnode_t* to_be_inserted = gen_node__(p, sizeof(Pair_##T1_##T2));                       \
-		rbtree_insert(root->entry, to_be_inserted);                                             \
-		return root;                                                                            \
-	}                                                                                           \
-	inline Rbtree_##T1_##T2* insert_Rbtree_move_##T1_##T2(Rbtree_##T1_##T2* root,               \
-														  Pair_##T1_##T2* p) {                  \
-		if(!root || !root->entry)                                                               \
-			return NULL;                                                                        \
-		rbnode_t* to_be_inserted = gen_node_move__(p);                                          \
-		rbtree_insert(root->entry, to_be_inserted);                                             \
-		return root;                                                                            \
-	}                                                                                           \
-	/* Return NULL if not found */                                                              \
-	inline Pair_##T1_##T2* find_Rbtree_##T1_##T2(const Rbtree_##T1_##T2* root, const T1* key) { \
-		Pair_##T1_##T2 want = make_x_pair((T1*)key, (T2*)NULL);                                 \
-		rbnode_t* iter = rbtree_search(root->entry, &want);                                     \
-		if(iter)                                                                                \
-			return iter->key;                                                                   \
-		else                                                                                    \
-			return NULL;                                                                        \
-	}                                                                                           \
-	/*Return the new root*/                                                                     \
-	inline Rbtree_##T1_##T2* erase_Rbtree_##T1_##T2(Rbtree_##T1_##T2* root, const T1* key) {    \
-		Pair_##T1_##T2* target = find_Rbtree_##T1_##T2(root, key);                              \
-		if(!target)                                                                             \
-			return NULL;                                                                        \
-		else {                                                                                  \
-			dtor_##T1_##T2(target);                                                             \
-			return root;                                                                        \
-		}                                                                                       \
-	}                                                                                           \
-	/*Reserve the rbroot space of this, you can also insert some typename in */                 \
-	inline Rbtree_##T1_##T2* clean_Rbtree_##T1_##T2(Rbtree_##T1_##T2* tree) {                   \
-		while(tree && tree->entry && tree->entry->root) {                                       \
-			/* keep erase the root node */                                                      \
-			erase_Rbtree_##T1_##T2(tree, ((Pair_##T1_##T2*)get_actual_data(tree))->key);        \
-		}                                                                                       \
-		return tree;                                                                            \
-	}                                                                                           \
-	/*You should not use this Map any more */                                                   \
-	inline void free_Rbtree_##T1_##T2(Rbtree_##T1_##T2* root) {                                 \
-		clean_Rbtree_##T1_##T2(root);                                                           \
-		free(root->entry);                                                                      \
-		free(root);                                                                             \
-		root = NULL;                                                                            \
-	}
 
 #endif /* UTIL_RBTREE_H_ */
