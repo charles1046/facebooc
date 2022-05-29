@@ -21,7 +21,7 @@ char* bsNewLen(char* buf, size_t len) {
 	assert(bs);
 	bs += BS_HEADER_LEN;
 
-	memcpy(bs, buf, len);
+	strncpy(bs, buf, len);
 	bsSetLen(bs, len);
 
 	return bs;
