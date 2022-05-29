@@ -1,0 +1,50 @@
+/* profile.html */
+main#profile {
+    .profileboard {
+        display: block;
+        background-color: #3FC1C9;
+        overflow: hidden;
+        padding: 3em 4em;
+        height: 260px;
+        margin-bottom: 3em;
+
+        .profileboard .name {
+            font-size: 36px;
+            margin: 6px 0;
+            color: #fff;
+        }
+
+        .profileboard .email {
+            font-size: 24px;
+            font-weight: 300;
+            color: #e9e9e9;
+        }
+
+        .profileboard p {
+            margin-top: 3em;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .profileboard {
+            padding: 3em 2em;
+            margin-bottom: 0;
+        }
+
+        .profileboard .name {
+            font-size: 36px;
+            margin: 6px 0;
+            color: #fff;
+        }
+
+        .profileboard .email {
+            font-size: 24px;
+            font-weight: 300;
+            color: #e9e9e9;
+        }
+
+        .profileboard p {
+            margin-top: 3em;
+        }
+    }
+}

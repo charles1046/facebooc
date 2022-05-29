@@ -1,42 +1,37 @@
-<nav class="navbar">
-    <a class="navbar-brand pull-left" href="/">facebooc</a>
-    <ul class="navbar-list pull-right">
-        <li class="navbar-item visible {%when active login active%} {%when loggedIn t hidden%} "><a href="/login/">Login</a></li>
-        <li class="navbar-item visible {%when active signup active%} {%when loggedIn t hidden%} "><a href="/signup/">Sign Up</a></li>
-        <li class="navbar-item {%when loggedIn t visible%} ">
-		    <form action="/search/" method="GET" class="form-inline">
-		    	<input type="text"
-		    	       class="form-control search"
-		    	       placeholder="Search for people..."
-		    	       name="q"
-		    	       value="{{searchQuery}}" />
-		    </form>
-		</li>
-        <li class="navbar-item {%when active dashboard active%}  {%when loggedIn t visible%} "><a href="/dashboard/">Dashboard</a></li>
-        <li class="navbar-item {%when loggedIn t visible%} "><a href="/logout/">Logout</a></li>
-    </ul>
+<nav class="navbar navbar-expand-lg fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand pull-left fs-2" href="/">facebooc</a>
+
+        <div class="justify-content-end">
+            <ul class="nav nav-pills">
+                <li class="nav-item visible {%when active login active%} {%when loggedIn t hidden%} ">
+                    <a class="nav-link" href="/login/">Login</a>
+                </li>
+
+                <li class="nav-item visible {%when active signup active%} {%when loggedIn t hidden%} ">
+                    <a class="nav-link" href="/signup/">Sign Up</a>
+                </li>
+            </ul>
+            
+            <ul class="nav nav-pills">
+                <li class="nav-item {%when active dashboard active%}  {%when loggedIn t visible%} ">
+                    <a class="nav-link" href="/dashboard/">Dashboard</a>
+                </li>
+
+                <li class="nav-item {%when loggedIn t visible%} ">
+                    <a class="nav-link" href="/logout/">Logout</a>
+                </li>
+                
+                <li class="nav-item {%when loggedIn t visible%} ">
+                    <form role="search" action="/search/" method="GET" class="form-inline">
+                        <input type="text"
+                               class="form-control"
+                               placeholder="Search for people..."
+                               name="q"
+                               value="{{searchQuery}}"/>
+                    </form>
+                </li>   
+            </ul>          
+        </div>
+    </div>
 </nav>
-
-<div class="hamburger">
-    <input type="checkbox" class="toggle" />
-
-    <span></span>
-    <span></span>
-    <span></span>
-
-    <ul class="hamburger-list">
-        <li class="hamburger-item visible {%when active login active%} {%when loggedIn t hidden%} "><a href="/login/">Login</a></li>
-        <li class="hamburger-item visible {%when active signup active%} {%when loggedIn t hidden%} "><a href="/signup/">Sign Up</a></li>
-        <li class="hamburger-item {%when loggedIn t visible%} ">
-            <form action="/search/" method="GET" class="form-inline">
-                <input type="text"
-                       class="form-control search"
-                       placeholder="Search for people..."
-                       name="q"
-                       value="{{searchQuery}}" />
-            </form>
-        </li>
-        <li class="hamburger-item {%when active dashboard active%}  {%when loggedIn t visible%} "><a href="/dashboard/">Dashboard</a></li>
-        <li class="hamburger-item {%when loggedIn t visible%} "><a href="/logout/">Logout</a></li>
-    </ul>
-</div>
