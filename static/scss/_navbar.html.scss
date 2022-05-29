@@ -1,0 +1,52 @@
+/* navbar.html */
+nav {
+    background-color: #364f6b;
+
+    .container-fluid {
+        padding: 0px 40px;
+    }
+
+    .navbar-brand {
+        color: white;
+        font-weight: bolder;
+
+        &:hover {
+            color: white;
+        }
+    }
+
+    .nav-pills {
+        border: none;
+    }
+
+    .nav-item {
+        display: none;
+
+        &.visible {
+            display: inline;
+        }
+
+        &.hidden {
+            display: none;
+        }
+
+        &.active {
+            border-radius: 5px;
+            background: #3fc1c9;
+        }
+    }
+
+    a.nav-link {
+        color: white;
+        font-weight: bold;
+
+        &:hover {
+            color: #3fc1c9;
+        }
+    }
+
+    input.form-control {
+        height: 30px;
+        border-radius: 20px;
+    }
+}
