@@ -1,52 +1,40 @@
 /* navbar.html */
+
 nav {
     background-color: #364f6b;
-
-    .container-fluid {
-        padding: 0px 40px;
-    }
-
-    .navbar-brand {
-        color: white;
-        font-weight: bolder;
-
-        &:hover {
-            color: white;
+    .container {
+        button.navbar-toggler {
+            border: none;
+            background-color: none;
+            span.navbar-toggler-icon {
+                color: #3fc1c9;
+            }
         }
     }
-
-    .nav-pills {
-        border: none;
-    }
-
-    .nav-item {
-        display: none;
-
-        &.visible {
-            display: inline;
+    .collapse {
+        form {
+            margin-left: 20px;
         }
-
-        &.hidden {
+        li,
+        form {
             display: none;
+            &.visible {
+                display: inline;
+            }
+            &.hidden {
+                display: none;
+            }
         }
-
-        &.active {
-            border-radius: 5px;
-            background: #3fc1c9;
+        li {
+            border-bottom: #364f6b solid 1px;
+            margin: auto;
+            margin-left: 0px;
+            &.active {
+                border-bottom: white solid 1px;
+                a {
+                    color: white;
+                }
+            }
         }
-    }
-
-    a.nav-link {
-        color: white;
-        font-weight: bold;
-
-        &:hover {
-            color: #3fc1c9;
-        }
-    }
-
-    input.form-control {
-        height: 30px;
-        border-radius: 20px;
     }
 }

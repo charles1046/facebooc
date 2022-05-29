@@ -1,6 +1,6 @@
 {%include templates/header.html%}
 <main id="dashboard">
-    <div id="title" class="p-4 p-md-5 mb-4 text-white rounded">
+    <div id="title" class="p-4 p-md-5 mb-4 text-white">
         <div class="col-md-6 px-0">
             <h1 class="display-4 fst-italic">Welcome back, {{accountName}}!</h1>
             <p class="lead my-3">Here's what your friends have been up to:</p>
@@ -10,12 +10,7 @@
 
     <form action="/post/" method="POST" id="main-form" role="form">
         <div class="form-group">
-            <textarea class="form-control shadow-none"
-                      id="post"
-                      name="post"
-                      rows="3"
-                      placeholder="What would you like to share?">
-            </textarea>
+            <textarea class="form-control shadow-none" id="post" name="post" rows="3" placeholder="What would you like to share?"></textarea>
         </div>
 
         <input class="btn btn-inline" type="submit" value="Post" />

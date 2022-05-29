@@ -5,7 +5,6 @@
 
 main#index .carousel {
     margin-bottom: 4rem;
-    margin-top: 58px;
     z-index: 1;
     /* Declare heights because of positioning of img element */
     .carousel-item {
@@ -53,8 +52,6 @@ main#index .carousel {
 /* Hero part */
 
 main#index .hero {
-    margin-top: 560px;
-    position: relative;
     z-index: 2;
     .container {
         h2 {

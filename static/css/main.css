@@ -32,7 +32,7 @@ a { color: unset; text-decoration: none; }
 
 html { font-family: "Open Sans"; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; }
 
-body { background-color: #f5f5f5; font-size: 14px; color: #222831; padding-top: 58px; overflow-x: hidden; }
+body { background-color: #f5f5f5; font-size: 14px; color: #222831; padding-top: 54px; overflow-x: hidden; }
 
 li { list-style: none; }
 
@@ -68,7 +68,7 @@ main#dashboard input.btn { background-color: #364f6b; border: 0; border-radius: 
 
 /* index.html */
 /* Carousel base class */
-main#index .carousel { margin-bottom: 4rem; margin-top: 58px; z-index: 1; /* Declare heights because of positioning of img element */ }
+main#index .carousel { margin-bottom: 4rem; z-index: 1; /* Declare heights because of positioning of img element */ }
 
 main#index .carousel .carousel-item { height: 32rem; /* Since positioning the image, we need to help out the caption */ }
 
@@ -85,7 +85,7 @@ main#index .carousel .carousel-item .carousel-caption p a.btn:hover { color: #BF
 main#index .carousel .carousel-item .carousel-caption p a.btn:active { -webkit-box-shadow: 0px 0px #3C1320; box-shadow: 0px 0px #3C1320; top: 4px; }
 
 /* Hero part */
-main#index .hero { margin-top: 560px; position: relative; z-index: 2; }
+main#index .hero { z-index: 2; }
 
 main#index .hero .container h2 { margin-bottom: 0.5rem; }
 
@@ -111,27 +111,23 @@ form#main-form .alert { margin-top: 6px; color: #F44538; font-size: 12px; line-h
 /* navbar.html */
 nav { background-color: #364f6b; }
 
-nav .container-fluid { padding: 0px 40px; }
+nav .container button.navbar-toggler { border: none; background-color: none; }
 
-nav .navbar-brand { color: white; font-weight: bolder; }
+nav .container button.navbar-toggler span.navbar-toggler-icon { color: #3fc1c9; }
 
-nav .navbar-brand:hover { color: white; }
+nav .collapse form { margin-left: 20px; }
 
-nav .nav-pills { border: none; }
+nav .collapse li, nav .collapse form { display: none; }
 
-nav .nav-item { display: none; }
+nav .collapse li.visible, nav .collapse form.visible { display: inline; }
 
-nav .nav-item.visible { display: inline; }
+nav .collapse li.hidden, nav .collapse form.hidden { display: none; }
 
-nav .nav-item.hidden { display: none; }
+nav .collapse li { border-bottom: #364f6b solid 1px; margin: auto; margin-left: 0px; }
 
-nav .nav-item.active { border-radius: 5px; background: #3fc1c9; }
+nav .collapse li.active { border-bottom: white solid 1px; }
 
-nav a.nav-link { color: white; font-weight: bold; }
-
-nav a.nav-link:hover { color: #3fc1c9; }
-
-nav input.form-control { height: 30px; border-radius: 20px; }
+nav .collapse li.active a { color: white; }
 
 /* post */
 .posts { margin: 0 auto 2em auto; background-color: #ffffff; width: 100%; -webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24); max-width: 588px; z-index: 4; }
