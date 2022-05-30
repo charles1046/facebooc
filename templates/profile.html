@@ -1,10 +1,12 @@
 {%include templates/header.html%}
 
-<div class="profileboard">
-    <div class="name">@{{profileName}}</div>
-    <div class="email">{{profileEmail}}</div>
-    <p>{{profileConnect}}</p>
-</div>
+<main id="profile">
+    <div class="profileboard">
+        <div class="name">@{{profileName}}</div>
+        <div class="email">{{profileEmail}}</div>
+        <p>{{profileConnect}}</p>
+    </div>
+</main>
 
 {{profilePosts}}
 
