@@ -23,6 +23,9 @@ TEST_UNIT = $(wildcard tests/http/*.o)
 
 c_codes := $(wildcard include/*.h include/models/*.h src/*.c src/models/*.c tests/http/*.c)
 
+scss_dir = static/scss/
+css_dir = static/css/
+
 deps := $(OBJS:%.o=%.o.d)
 
 src/%.o: src/%.c
@@ -36,6 +39,9 @@ $(EXEC): $(OBJS)
 
 html-updater: $(EXEC)
 	@scripts/auto-update-html.sh
+
+gen-css:
+	sass $(scss_dir):$(css_dir)
 
 run: $(EXEC) html-updater
 	@echo "Starting Facebooc service..."
