@@ -12,8 +12,6 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	// srand(time(NULL));
-
 	uint16_t server_port = 8080;
 
 	if(argc > 1 && sscanf(argv[1], "%hu", &server_port) == 0) {

@@ -40,7 +40,7 @@ static Response* notFound(Request*);  // default route
 static inline int get_id(const char* uri);
 static const Account* get_account(const Cookie* c);
 
-Facebooc* FB_new(uint16_t port) {
+Facebooc* FB_new(const uint16_t port) {
 	Facebooc* s = malloc(sizeof(Facebooc));
 	s->server = serverNew(port);
 	serverAddHandler(s->server, "signup", signup);

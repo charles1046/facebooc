@@ -30,7 +30,7 @@ static inline void pop_log(const struct sockaddr_in* addr, const char* method, c
 	fprintf(stdout, "%s %s %s %s %d\n", timebuff, inet_ntoa(addr->sin_addr), method, path, status);
 }
 
-Server* serverNew(uint16_t port) {
+Server* serverNew(const uint16_t port) {
 	Server* server = malloc(sizeof(Server));
 	server->port = port;
 	server->priv = epoll_create1(0);
