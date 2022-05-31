@@ -16,17 +16,31 @@ typedef struct Account {
 	char* username;
 } Account;
 
-// !FIXME: Write comments, what do they do?
-// !Please notice the uid is int32_t
-Account* accountNew(int, int, const char*, const char*, const char*);
-Account* accountCreate(sqlite3*, const char* name, const char* email, const char* username,
+// Account ctor
+Account* accountNew(int id, int create_at, const char* name, const char* email,
+					const char* username);
+
+// Create a new account into db
+Account* accountCreate(sqlite3* db, const char* name, const char* email, const char* username,
 					   const char* password);
-Account* accountGetById(sqlite3*, int);
-Account* accountGetByEmail(sqlite3*, const char*);
-Account* accountGetBySId(sqlite3*, const char*);
-Node* accountSearch(sqlite3*, const char*, int);
-bool accountCheckUsername(sqlite3*, const char* username);
-bool accountCheckEmail(sqlite3*, const char* email);
-void accountDel(Account*);
+// Get account by uid, return NULL if not found
+Account* accountGetById(sqlite3* db, int uid);
+// Get account by email, return NULL if not found
+Account* accountGetByEmail(sqlite3* db, const char* email);
+// Get account by sid, return NULL if not found
+Account* accountGetBySId(sqlite3* db, const char* sid);
+// Find name or emmail or username from db
+//
+// Detail: @page is the OFFSET you had viewed, because of the performance issue
+// 		   we search a page (10 entries) once.
+Node* accountSearch(sqlite3* db, const char* what_to_search, int page);
+// Check if username is taken
+bool accountCheckUsername(sqlite3* db, const char* username);
+// Check if email is taken
+bool accountCheckEmail(sqlite3* db, const char* email);
+// Return true if authentication successful, false o.w.
+bool account_auth(sqlite3* db, const char* username, const char* password);
+// Account dtor, pass NULL is safe
+void accountDel(Account* acc);
 
 #endif

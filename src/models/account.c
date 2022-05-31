@@ -4,6 +4,8 @@
 #include "bs.h"
 #include "models/account.h"
 #include "models/session.h"
+#include "utility.h"
+#include <string.h>
 
 Account* accountNew(int id, int createdAt, const char* name, const char* email,
 					const char* username) {
@@ -126,7 +128,7 @@ Account* accountGetBySId(sqlite3* DB, const char* sid) {
 		return NULL;
 
 	Account* account = NULL;
-	sqlite3_stmt* statement;
+	sqlite3_stmt* statement = NULL;
 	if(sqlite3_prepare_v2(DB,
 						  "SELECT id, createdAt, name, email, username"
 						  "  FROM accounts"
@@ -197,8 +199,7 @@ fail:
 }
 
 bool accountCheckUsername(sqlite3* DB, const char* username) {
-	bool res;
-	sqlite3_stmt* statement;
+	sqlite3_stmt* statement = NULL;
 
 	if(sqlite3_prepare_v2(DB, "SELECT id FROM accounts WHERE username = ?", -1, &statement, NULL)
 	   != SQLITE_OK) {
@@ -210,7 +211,7 @@ bool accountCheckUsername(sqlite3* DB, const char* username) {
 		return false;
 	}
 
-	res = sqlite3_step(statement) != SQLITE_ROW;
+	bool res = sqlite3_step(statement) != SQLITE_ROW;
 
 	sqlite3_finalize(statement);
 
@@ -218,8 +219,7 @@ bool accountCheckUsername(sqlite3* DB, const char* username) {
 }
 
 bool accountCheckEmail(sqlite3* DB, const char* email) {
-	bool res;
-	sqlite3_stmt* statement;
+	sqlite3_stmt* statement = NULL;
 
 	if(sqlite3_prepare_v2(DB, "SELECT id FROM accounts WHERE email = ?", -1, &statement, NULL)
 	   != SQLITE_OK) {
@@ -230,7 +230,7 @@ bool accountCheckEmail(sqlite3* DB, const char* email) {
 		sqlite3_finalize(statement);
 		return false;
 	}
-	res = sqlite3_step(statement) != SQLITE_ROW;
+	bool res = sqlite3_step(statement) != SQLITE_ROW;
 
 	sqlite3_finalize(statement);
 
@@ -238,8 +238,33 @@ bool accountCheckEmail(sqlite3* DB, const char* email) {
 }
 
 void accountDel(Account* account) {
+	if(unlikely(account == NULL))
+		return;
 	bsDel(account->name);
 	bsDel(account->email);
 	bsDel(account->username);
 	free(account);
+}
+
+bool account_auth(sqlite3* DB, const char* username, const char* password) {
+	if(unlikely(!username || !password))
+		return false;
+
+	sqlite3_stmt* statement = NULL;
+	if(sqlite3_prepare_v2(DB, "SELECT password FROM accounts WHERE username = ?", -1, &statement,
+						  NULL)
+	   != SQLITE_OK)
+		return false;
+
+	if(sqlite3_bind_text(statement, 1, password, -1, NULL) != SQLITE_OK) {
+		sqlite3_finalize(statement);
+		return false;
+	}
+
+	(void)sqlite3_step(statement);
+
+	const char* real_pwd = (const char*)sqlite3_column_text(statement, 0);
+	bool res = !strcmp(real_pwd, password);
+	sqlite3_finalize(statement);
+	return res;
 }
