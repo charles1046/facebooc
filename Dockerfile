@@ -20,7 +20,6 @@ RUN npm install -g npm && \
     npm install -g sass && \
     sass scss/:css/
 
-
 FROM debian:latest
 LABEL Author="zxc25077667@protonmail.com"
 ENV port 8080
