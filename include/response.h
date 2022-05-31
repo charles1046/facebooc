@@ -61,6 +61,7 @@ typedef struct Response {
 
 Response* responseNew();
 Response* responseNewRedirect(char*);
+Response* responseNewRedirectWithCookie(char*);
 void responseSetStatus(Response*, Status);
 void responseSetBody(Response*, char*);
 void responseAddCookie(Response*, char*, char*, char*, char*, int);

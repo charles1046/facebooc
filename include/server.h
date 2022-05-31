@@ -1,24 +1,24 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "list.h"
+#include "hash_map.h"
 #include "request.h"
 #include "response.h"
 #include <stdint.h>
+typedef struct Server Server;
+typedef Response* (*Handler)(Request*);
 
-typedef struct Server {
+struct Server {
 	unsigned int port;
 	uintptr_t priv;
-	Node* handlers;
-} Server;
-
-typedef Response* (*Handler)(Request*);
-typedef Response* (**HandlerP)(Request*);
+	Hash_map* handlers;
+	Handler default_callback;
+};
 
 Server* serverNew(uint16_t);
-void serverDel(Server*);
-void serverAddHandler(Server*, Handler);
-void serverAddStaticHandler(Server*);
-void serverServe(Server*);
+void serverAddHandler(Server* server, const char* route_name, Handler handler);
+void set_callback(Server* server, Handler handler);
+void serverDel(Server* server);
+void serverServe(Server* server);
 
 #endif

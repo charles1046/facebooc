@@ -9,16 +9,14 @@
 #include <sys/epoll.h>
 #include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 typedef int sockopt_t;
 
-#include "bs.h"
+#include "db.h"
 #include "server.h"
-
-#define min(x, y) ((x) < (y) ? (x) : (y))
+#include "utility.h"
 
 static char* METHODS[8] = { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT" };
 
@@ -36,96 +34,25 @@ Server* serverNew(uint16_t port) {
 	Server* server = malloc(sizeof(Server));
 	server->port = port;
 	server->priv = epoll_create1(0);
-	server->handlers = NULL;
+	server->handlers = Hash_map_new();
 	return server;
 }
 
 void serverDel(Server* server) {
-	if(server->handlers)
-		clear(server->handlers);
+	Hash_map_delete(server->handlers);
 	free(server);
 }
 
-void serverAddHandler(Server* server, Handler handler) {
-	HandlerP handlerP = &handler;
-	server->handlers = insert(handlerP, sizeof(HandlerP), server->handlers);
+void serverAddHandler(Server* server, const char* route_name, Handler handler) {
+	SPair* new_handler = malloc(sizeof(SPair));
+	new_handler->key = strdup(route_name);
+	new_handler->value = memdup(&handler, sizeof(Handler));
+
+	Hash_map_insert_move(server->handlers, new_handler);
 }
 
-// compare str1 and str2 from tail
-static inline int rev_cmp(const char* str1, size_t len1, const char* str2, size_t len2) {
-	const long smaller = min(len1, len2);
-	return strncmp(str1 + len1 - smaller, str2 + len2 - smaller, smaller);
-}
-
-static inline const char* mimeType_mux(const char* path) {
-	static const char* file_type[] = {
-		"html", "json", "jpeg", "jpg", "gif", "png", "css", "js",
-	};
-	static const size_t file_type_len = sizeof(file_type) / sizeof(*file_type);
-
-	static const char* mime_type[] = {
-		"text/html", "application/json",	   "image/jpeg", "image/jpeg", "image/gif", "image/png",
-		"text/css",	 "application/javascript", "text/plain",
-	};
-
-	size_t i = 0;
-	for(; i < file_type_len; i++) {
-		if(rev_cmp(path, strlen(path), file_type[i], strlen(file_type[i])) == 0)
-			break;
-	}
-
-	return mime_type[i];
-}
-
-static Response* staticHandler(Request* req) {
-	// Check is begin with "/static/"
-	ROUTE(req, "/static/");
-
-	// EXIT ON SHENANIGANS
-	if(strstr(req->uri, "../"))
-		return NULL;
-
-	const char* filename = req->uri + 1;
-
-	// EXIT ON DIRS
-	struct stat sbuff;
-	if(stat(filename, &sbuff) < 0 || S_ISDIR(sbuff.st_mode))
-		return NULL;
-
-	// EXIT ON NOT FOUND
-	FILE* file = fopen(filename, "r");
-	if(!file)
-		return NULL;
-
-	// GET LENGTH
-	char lens[25];
-	fseek(file, 0, SEEK_END);
-	size_t len = ftell(file);
-	snprintf(lens, 10, "%ld", (long int)len);
-	rewind(file);
-
-	// SET BODY
-	Response* response = responseNew();
-
-	char* buff = malloc(sizeof(char) * len);
-	(void)!fread(buff, sizeof(char), len, file);
-	responseSetBody(response, bsNewLen(buff, len));
-	fclose(file);
-	free(buff);
-
-	// MIME TYPE
-	const char* mimeType = mimeType_mux(req->uri);
-
-	// RESPOND
-	responseSetStatus(response, OK);
-	responseAddHeader(response, "Content-Type", mimeType);
-	responseAddHeader(response, "Content-Length", lens);
-	responseAddHeader(response, "Cache-Control", "max-age=2592000");
-	return response;
-}
-
-void serverAddStaticHandler(Server* server) {
-	serverAddHandler(server, staticHandler);
+void set_callback(Server* server, Handler handler) {
+	server->default_callback = handler;
 }
 
 static inline int makeSocket(unsigned int port) {
@@ -187,7 +114,7 @@ static void serverDelFd(Server* server, int fd) {
 }
 
 static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
-	int nread;
+	int nread = 0;
 	char buff[20480];
 
 	if((nread = recv(fd, buff, sizeof(buff), 0)) < 0) {
@@ -208,24 +135,20 @@ static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
 			pop_log(addr, "", "", 400);
 		}
 		else {
-			Node* handler = server->handlers;
-			Response* response = NULL;
+			// Route one dir in once
+			char dir[32] = { 0 };  // Suppose single dir is less than 32 char
+			fetch_dir(dir, req->uri + 1);
 
-			while(handler && !response) {
-				response = (*(HandlerP)handler->value)(req);
-				handler = handler->next;
-			}
+			Handler* handler_func = Hash_map_get(server->handlers, dir);
+			if(!handler_func)  // not found
+				handler_func = &server->default_callback;
 
-			if(!response) {
-				send(fd, "HTTP/1.0 404 Not Found\r\n\r\nNot Found!", 36, 0);
-				pop_log(addr, METHODS[req->method], req->path, 404);
-			}
-			else {
-				pop_log(addr, METHODS[req->method], req->path, response->status);
+			Response* response = (*handler_func)(req);
 
-				responseWrite(response, fd);
-				responseDel(response);
-			}
+			pop_log(addr, METHODS[req->method], req->path, response->status);
+
+			responseWrite(response, fd);
+			responseDel(response);
 
 			requestDel(req);
 		}

@@ -26,7 +26,8 @@ Hash_map* Hash_map_new() {
 void Hash_map_delete(Hash_map* map) {
 	// First free allocated keys.
 	for(size_t i = 0; i < map->cap; i++)
-		SPair_delete(map->entries[i]);
+		if(map->entries[i])
+			SPair_delete(map->entries[i]);
 
 	// Then free entries array and map itself.
 	free(map->entries);
