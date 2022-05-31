@@ -76,11 +76,12 @@ void FB_delete(Facebooc* s) {
 	s = NULL;
 }
 
-#define invalid(k, v)                \
-	{                                \
-		templateSet(template, k, v); \
-		valid = false;               \
-	}
+static int invalid(Template* template, const char* key, const char* value) {
+	templateSet(template, key, value);
+	int valid = false;
+	return valid;
+}
+
 #define min(x, y) ((x) < (y) ? (x) : (y))
 
 // compare str1 and str2 from tail
@@ -528,14 +529,14 @@ static Response* login(Request* req) {
 		char* password = kvFindList(req->postBody, "password");
 
 		if(!username) {
-			invalid("usernameError", "Username missing!");
+			invalid(template, "usernameError", "Username missing!");
 		}
 		else {
 			templateSet(template, "formUsername", username);
 		}
 
 		if(!password) {
-			invalid("passwordError", "Password missing!");
+			invalid(template, "passwordError", "Password missing!");
 		}
 
 		if(valid) {
@@ -549,7 +550,7 @@ static Response* login(Request* req) {
 				return response;
 			}
 			else {
-				invalid("usernameError", "Invalid username or password.");
+				invalid(template, "usernameError", "Invalid username or password.");
 			}
 		}
 	}
@@ -595,56 +596,57 @@ static Response* signup(Request* req) {
 		const char* confirmPassword = kvFindList(req->postBody, "confirm-password");
 
 		if(!name) {
-			invalid("nameError", "You must enter your name!");
+			invalid(template, "nameError", "You must enter your name!");
 		}
 		else if(strlen(name) < 5 || strlen(name) > 50) {
-			invalid("nameError", "Your name must be between 5 and 50 characters long.");
+			invalid(template, "nameError", "Your name must be between 5 and 50 characters long.");
 		}
 		else {
 			templateSet(template, "formName", name);
 		}
 
 		if(!email) {
-			invalid("emailError", "You must enter an email!");
+			invalid(template, "emailError", "You must enter an email!");
 		}
 		else if(strchr(email, '@') == NULL) {
-			invalid("emailError", "Invalid email.");
+			invalid(template, "emailError", "Invalid email.");
 		}
 		else if(strlen(email) < 3 || strlen(email) > 50) {
-			invalid("emailError", "Your email must be between 3 and 50 characters long.");
+			invalid(template, "emailError", "Your email must be between 3 and 50 characters long.");
 		}
 		else if(!accountCheckEmail(get_db(), email)) {
-			invalid("emailError", "This email is taken.");
+			invalid(template, "emailError", "This email is taken.");
 		}
 		else {
 			templateSet(template, "formEmail", email);
 		}
 
 		if(!username) {
-			invalid("usernameError", "You must enter a username!");
+			invalid(template, "usernameError", "You must enter a username!");
 		}
 		else if(strlen(username) < 3 || strlen(username) > 50) {
-			invalid("usernameError", "Your username must be between 3 and 50 characters long.");
+			invalid(template, "usernameError",
+					"Your username must be between 3 and 50 characters long.");
 		}
 		else if(!accountCheckUsername(get_db(), username)) {
-			invalid("usernameError", "This username is taken.");
+			invalid(template, "usernameError", "This username is taken.");
 		}
 		else {
 			templateSet(template, "formUsername", username);
 		}
 
 		if(!password) {
-			invalid("passwordError", "You must enter a password!");
+			invalid(template, "passwordError", "You must enter a password!");
 		}
 		else if(strlen(password) < 8) {
-			invalid("passwordError", "Your password must be at least 8 characters long!");
+			invalid(template, "passwordError", "Your password must be at least 8 characters long!");
 		}
 
 		if(!confirmPassword) {
-			invalid("confirmPasswordError", "You must confirm your password.");
+			invalid(template, "confirmPasswordError", "You must confirm your password.");
 		}
 		else if(strcmp(password, confirmPassword) != 0) {
-			invalid("confirmPasswordError", "The two passwords must be the same.");
+			invalid(template, "confirmPasswordError", "The two passwords must be the same.");
 		}
 
 		if(valid) {
@@ -658,7 +660,7 @@ static Response* signup(Request* req) {
 				return response;
 			}
 			else {
-				invalid("nameError", "Unexpected error. Please try again later.");
+				invalid(template, "nameError", "Unexpected error. Please try again later.");
 			}
 		}
 	}

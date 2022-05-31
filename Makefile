@@ -57,7 +57,7 @@ tests/%.o: tests/%.c $(OBJS)
 
 test: $(TEST_UNIT_OBJ)
 	@echo Do testing...
-	@python3 tests/driver.py
+	@tests/driver.py
 	@echo done
 
 release: before_release html-updater gen-css

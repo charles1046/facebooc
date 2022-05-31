@@ -11,7 +11,7 @@ typedef struct Template {
 
 Template* templateNew(const char*);
 void templateDel(Template*);
-void templateSet(Template*, const char* key, const char* value);
+void templateSet(Template* template, const char* key, const char* value);
 char* templateRender(Template*);
 
 #endif
