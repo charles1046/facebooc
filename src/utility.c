@@ -2,6 +2,7 @@
 #include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Reference: http://www.cse.yorku.ca/~oz/hash.html
 int string_hash(const char* str) {
@@ -48,4 +49,17 @@ void mem_canary_alert(const char* msg) {
 
 	free(symbols);
 #endif
+}
+
+void* memdup(const void* mem, size_t size) {
+	void* out = malloc(size);
+	if(out != NULL)
+		memcpy(out, mem, size);
+	return out;
+}
+
+void fetch_dir(char* restrict dst, const char* restrict src) {
+	const char* sep = strchr(src, '/');
+	if(sep)
+		memcpy(dst, src, sep - src);
 }

@@ -33,7 +33,6 @@ static inline Request* request_ctor() {
 	request->postBody = NULL;
 	request->headers = NULL;
 	request->cookies = NULL;
-	request->account = NULL;
 	return request;
 }
 
@@ -151,8 +150,6 @@ void requestDel(Request* req) {
 		kvDelList((Node*)req->headers);
 	if(req->cookies)
 		kvDelList((Node*)req->cookies);
-	if(req->account)
-		accountDel(req->account);
 
 	free(req);
 }

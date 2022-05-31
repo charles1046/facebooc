@@ -14,13 +14,6 @@ static inline int cmpf(const void* a, const void* b) {
 	return pb->key - pa->key;
 }
 
-static inline void* memdup(const void* mem, size_t size) {
-	void* out = malloc(size);
-	if(out != NULL)
-		memcpy(out, mem, size);
-	return out;
-}
-
 Map* Map_new() {
 	Map* m = malloc(sizeof(Map));
 	const rbtree_t* tree_ = rbtree_create(cmpf);

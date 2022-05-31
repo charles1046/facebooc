@@ -3,13 +3,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-/* "typeof" is a GNU extension.
- * Reference: https://gcc.gnu.org/onlinedocs/gcc/Typeof.html
- */
-#if defined(__GNUC__)
-#define __LIST_HAVE_TYPEOF 1
-#endif
-
 /**
  * container_of() - Calculate address of object that contains address ptr
  * @ptr: pointer to member variable
@@ -19,7 +12,7 @@
  * Return: @type pointer of object containing ptr
  */
 #ifndef container_of
-#ifdef __LIST_HAVE_TYPEOF
+#ifdef __GNUC__
 #define container_of(ptr, type, member)                          \
 	__extension__({                                              \
 		const __typeof__(((type*)0)->member)* __pmember = (ptr); \
@@ -27,6 +20,18 @@
 	})
 #else
 #define container_of(ptr, type, member) ((type*)((char*)(ptr)-offsetof(type, member)))
+#endif
+#endif
+
+#ifndef container_of_p
+#ifdef __GNUC__
+#define container_of_p(ptr, type, ptr_member)                       \
+	__extension__({                                                 \
+		const __typeof__(((type*)0)->ptr_member) __pmember = (ptr); \
+		(type*)((char*)__pmember - offsetof(type, ptr_member));     \
+	})
+#else
+#define container_of_p(ptr, type, ptr_member) ((type*)((char*)(ptr)-offsetof(type, ptr_member)))
 #endif
 #endif
 
@@ -41,5 +46,11 @@ int string_hash(const char* s);
 int obj_hash(const void* data, size_t size);
 // trigger the address sanitizer
 void mem_canary_alert(const char* msg);
+
+void* memdup(const void* mem, size_t size);
+
+// Copy "^%s/.*$" which %s from src to dst
+// %s will not contain any '/'
+void fetch_dir(char* restrict dst, const char* restrict src);
 
 #endif
