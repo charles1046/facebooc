@@ -13,13 +13,6 @@ COPY ["templates", "/app/templates/"]
 COPY ["static/scss/", "/app/static/scss"]
 RUN make release
 
-FROM node:alpine as scss-compiler
-WORKDIR /static
-COPY ["static/scss/", "/static/scss"]
-RUN npm install -g npm && \ 
-    npm install -g sass && \
-    sass /static/scss/:/static/css/
-
 FROM debian:latest
 LABEL Author="zxc25077667@protonmail.com"
 ENV port 8080

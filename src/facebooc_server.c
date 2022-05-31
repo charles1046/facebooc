@@ -40,7 +40,7 @@ static Response* notFound(Request*);  // default route
 static inline int get_id(const char* uri);
 static const Account* get_account(const Cookie* c);
 
-Facebooc* FB_new(uint16_t port) {
+Facebooc* FB_new(const uint16_t port) {
 	Facebooc* s = malloc(sizeof(Facebooc));
 	s->server = serverNew(port);
 	serverAddHandler(s->server, "signup", signup);
@@ -523,8 +523,6 @@ static Response* login(Request* req) {
 	templateSet(template, "subtitle", "Login");
 
 	if(req->method == POST) {
-		bool valid = true;
-
 		char* username = kvFindList(req->postBody, "username");
 		char* password = kvFindList(req->postBody, "password");
 
@@ -539,6 +537,8 @@ static Response* login(Request* req) {
 			invalid(template, "passwordError", "Password missing!");
 		}
 
+		bool valid = account_auth(get_db(), username, password);
+
 		if(valid) {
 			Session* session = sessionCreate(get_db(), username, password);
 			if(session) {
@@ -552,6 +552,9 @@ static Response* login(Request* req) {
 			else {
 				invalid(template, "usernameError", "Invalid username or password.");
 			}
+		}
+		else {
+			invalid(template, "usernameError", "Invalid username or password.");
 		}
 	}
 
