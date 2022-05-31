@@ -5,6 +5,7 @@
 typedef struct Pair Pair;
 typedef struct PPair PPair;
 typedef struct SPair SPair;
+typedef struct SSPair SSPair;
 
 struct Pair {
 	uint64_t key;
@@ -23,8 +24,14 @@ struct SPair {
 	void* value;
 };
 
+struct SSPair {
+	char* key;
+	char* value;
+};
+
 void Pair_delete(Pair* p);
 void PPair_delete(PPair* p);
 void SPair_delete(SPair* p);
+void SSPair_delete(SSPair* p);
 
 #endif

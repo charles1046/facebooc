@@ -15,8 +15,8 @@ typedef struct Post {
 	char* body;
 } Post;
 
-Post* postNew(int, int, int, char*);
-Post* postCreate(sqlite3*, int, char*);
+Post* postNew(int, int, int, const char*);
+Post* postCreate(sqlite3*, int uid, const char* body);
 Post* postGetById(sqlite3*, int);
 Node* postGetLatest(sqlite3*, int, int);
 Node* postGetLatestGraph(sqlite3*, int, int);

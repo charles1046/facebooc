@@ -3,6 +3,7 @@
 
 #include <string.h>
 
+#include "http/cookies.h"
 #include "list.h"
 
 typedef enum Method {
@@ -25,7 +26,7 @@ typedef struct Request {
 
 	const Node* queryString;
 	const Node* postBody;
-	const Node* cookies;
+	const Cookie* cookies;
 	const Node* headers;
 } Request;
 

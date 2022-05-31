@@ -9,6 +9,6 @@ Facebooc* FB_new(uint16_t port);
 int FB_run(Facebooc* s);
 void FB_delete(Facebooc* s);
 
-// You should add supporting routes in facebooc_server.c
+// You should add supported routings in facebooc_server.c
 
 #endif

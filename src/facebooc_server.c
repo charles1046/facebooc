@@ -23,7 +23,6 @@ struct Facebooc {
 	Server* server;
 };
 
-static Response* session(Request*);
 static Response* home(Request*);
 static Response* dashboard(Request*);
 static Response* profile(Request*);
@@ -35,16 +34,15 @@ static Response* search(Request*);
 static Response* login(Request*);
 static Response* logout(Request*);
 static Response* signup(Request*);
-static Response* about(Request*);
 static Response* static_handler(Request* req);
 static Response* notFound(Request*);  // default route
 
 static inline int get_id(const char* uri);
+static const Account* get_account(const Cookie* c);
 
 Facebooc* FB_new(uint16_t port) {
 	Facebooc* s = malloc(sizeof(Facebooc));
 	s->server = serverNew(port);
-	serverAddHandler(s->server, "about", about);
 	serverAddHandler(s->server, "signup", signup);
 	serverAddHandler(s->server, "logout", logout);
 	serverAddHandler(s->server, "login", login);
@@ -155,18 +153,22 @@ static Response* static_handler(Request* req) {
 	return response;
 }
 
-static Response* session(Request* req) {
-	const char* sid = kvFindList(req->cookies, "sid");
-
-	if(sid)
-		req->account = accountGetBySId(get_db(), sid);
-
-	return NULL;
+// Get sid string from cookies
+static const Account* get_account(const Cookie* c) {
+	// TODO: Use a object pool to reduce malloc times
+	if(unlikely(c == NULL))
+		return NULL;
+	const char* sid = Cookie_get(c, "sid");
+	return accountGetBySId(get_db(), sid);
 }
 
 static Response* home(Request* req) {
-	if(req->account)
+	// ! What do here do?
+	const Account* my_acc = get_account(req->cookies);
+	if(my_acc) {
+		accountDel((Account*)my_acc);
 		return responseNewRedirect("/dashboard/");
+	}
 
 	Response* response = responseNew();
 	Template* template = templateNew("templates/index.html");
@@ -179,18 +181,20 @@ static Response* home(Request* req) {
 }
 
 static Response* dashboard(Request* req) {
-	if(!req->account)
-		return responseNewRedirect("/login/");
+	const Account* my_acc = get_account(req->cookies);
+	if(unlikely(my_acc == NULL))
+		return NULL;
 
-	Node* postCell = postGetLatestGraph(get_db(), req->account->id, 0);
+	Node* postCell = postGetLatestGraph(get_db(), my_acc->id, 0);
 	char* res = NULL;
 	if(postCell)
 		res = bsNew("<ul class=\"posts\">");
 
+	// ! What do here do?
 	while(postCell) {
 		Post* post = (Post*)postCell->value;
 		Account* account = accountGetById(get_db(), post->authorId);
-		bool liked = likeLiked(get_db(), req->account->id, post->id);
+		bool liked = likeLiked(get_db(), my_acc->id, post->id);
 		const size_t acc_len = strlen(account->name);
 		const size_t post_len = strlen(post->body);
 
@@ -245,45 +249,53 @@ static Response* dashboard(Request* req) {
 	templateSet(template, "active", "dashboard");
 	templateSet(template, "loggedIn", "t");
 	templateSet(template, "subtitle", "Dashboard");
-	templateSet(template, "accountName", req->account->name);
+	templateSet(template, "accountName", my_acc->name);
 	Response* response = responseNew();
 	responseSetStatus(response, OK);
 	responseSetBody(response, templateRender(template));
 	templateDel(template);
+	accountDel((Account*)my_acc);
 	return response;
 }
 
+// Preview someone's profile page
 static Response* profile(Request* req) {
-	if(!req->account)
+	// Check I'm logined
+	const Account* my_acc = get_account(req->cookies);
+	if(unlikely(my_acc == NULL))
 		return NULL;
 
-	const int id = get_id(req->uri);
-	char id_str[10] = { 0 };
-	snprintf(id_str, 10, "%d", id);
+	const Account* acc2 = accountGetById(get_db(), get_id(req->uri));
 
-	Account* account = accountGetById(get_db(), id);
-
-	if(!account)
+	if(!acc2)
 		return NULL;
-	if(account->id == req->account->id)
+	if(acc2->id == my_acc->id) {
+		accountDel((Account*)my_acc);
+		accountDel((Account*)acc2);
 		return responseNewRedirect("/dashboard/");
+	}
 
-	Connection* connection = connectionGetByAccountIds(get_db(), req->account->id, account->id);
-	char connectStr[512];
+	// VLA is not in POSIX1.
+	// Max length of uid is len(INT_MAX), in other words, the maxlen of uid is 10
+	char acc2_id_str[11] = { 0 };
+	snprintf(acc2_id_str, 11, "%d", acc2->id);
+
+	Connection* connection = connectionGetByAccountIds(get_db(), my_acc->id, acc2->id);
+	char connectStr[512] = { 0 };
 	if(connection) {
-		snprintf(connectStr, 26 + strlen(account->name), "You and %s are connected!",
-				 account->name);
+		snprintf(connectStr, 26 + strlen(acc2->name), "You and %s are connected!", acc2->name);
 	}
 	else {
-		const size_t name_len = strlen(account->name);
+		const size_t name_len = strlen(acc2->name);
 		snprintf(connectStr, 76 + name_len + 10,
 				 "You and %s are not connected."
 				 " <a href=\"/connect/%d/\">Click here</a> to connect!",
-				 account->name, account->id);
+				 acc2->name, acc2->id);
 	}
+	connectionDel(connection);
 
 	Node* postPCell = NULL;
-	Node* postCell = postGetLatest(get_db(), account->id, 0);
+	Node* postCell = postGetLatest(get_db(), acc2->id, 0);
 
 	char* res = NULL;
 	if(postCell)
@@ -294,7 +306,7 @@ static Response* profile(Request* req) {
 	time_t t;
 	while(postCell) {
 		Post* post = (Post*)postCell->value;
-		liked = likeLiked(get_db(), req->account->id, post->id);
+		liked = likeLiked(get_db(), my_acc->id, post->id);
 
 		const size_t body_len = strlen(post->body);
 		bbuff = bsNewLen("", body_len + 256);
@@ -336,102 +348,106 @@ static Response* profile(Request* req) {
 
 	templateSet(template, "active", "profile");
 	templateSet(template, "loggedIn", "t");
-	templateSet(template, "subtitle", account->name);
-	templateSet(template, "profileId", id_str);
-	templateSet(template, "profileName", account->name);
-	templateSet(template, "profileEmail", account->email);
+	templateSet(template, "subtitle", acc2->name);
+	templateSet(template, "profileId", acc2_id_str);
+	templateSet(template, "profileName", acc2->name);
+	templateSet(template, "profileEmail", acc2->email);
 	templateSet(template, "profileConnect", connectStr);
-	templateSet(template, "accountName", req->account->name);
+	templateSet(template, "accountName", my_acc->name);
 	Response* response = responseNew();
 	responseSetStatus(response, OK);
 	responseSetBody(response, templateRender(template));
-	connectionDel(connection);
-	accountDel(account);
+	accountDel((Account*)my_acc);
+	accountDel((Account*)acc2);
 	templateDel(template);
 	return response;
 }
 
+// I post a post via HTTP POST
 static Response* post(Request* req) {
-	if(req->method != POST)
-		return NULL;
+	const Account* acc = get_account(req->cookies);
+	if(unlikely(acc == NULL))
+		goto fail;
 
-	char* postStr = kvFindList(req->postBody, "post");
+	if(unlikely(req->method != POST))
+		goto fail;
+
+	const char* postStr = kvFindList(req->postBody, "post");
 
 	if(strlen(postStr) == 0)
-		return responseNewRedirect("/dashboard/");
+		goto fail;
 	else if(strlen(postStr) < MAX_BODY_LEN)
-		postDel(postCreate(get_db(), req->account->id, postStr));
+		postDel(postCreate(get_db(), acc->id, postStr));
 
+fail:
+	accountDel((Account*)acc);
 	return responseNewRedirect("/dashboard/");
 }
 
 static Response* unlike(Request* req) {
-	if(!req->account)
-		return NULL;
+	const Account* my_acc = get_account(req->cookies);
+	char redir_to[32] = { "/dashboard/" };
+	if(unlikely(my_acc == NULL))
+		goto fail;
 
-	const int id = get_id(req->uri);
-
-	Post* post = postGetById(get_db(), id);
+	const Post* post = postGetById(get_db(), get_id(req->uri));
 	if(!post)
 		goto fail;
 
-	likeDel(likeDelete(get_db(), req->account->id, post->authorId, post->id));
+	likeDel(likeDelete(get_db(), my_acc->id, post->authorId, post->id));
 
-	if(kvFindList(req->queryString, "r")) {
-		char sbuff[1024];
-		snprintf(sbuff, 21, "/profile/%d/", post->authorId);
-		return responseNewRedirect(sbuff);
-	}
+	if(kvFindList(req->queryString, "r"))
+		snprintf(redir_to, 32, "/profile/%d/", post->authorId);
 
 fail:
-	return responseNewRedirect("/dashboard/");
+	accountDel((Account*)my_acc);
+	return responseNewRedirect(redir_to);
 }
 
 static Response* like(Request* req) {
-	if(!req->account)
-		return NULL;
+	const Account* my_acc = get_account(req->cookies);
+	char redir_to[32] = { "/dashboard/" };
+	if(unlikely(my_acc == NULL))
+		goto fail;
 
-	const int id = get_id(req->uri);
-
-	Post* post = postGetById(get_db(), id);
+	const Post* post = postGetById(get_db(), get_id(req->uri));
 	if(!post)
 		goto fail;
 
-	likeDel(likeCreate(get_db(), req->account->id, post->authorId, post->id));
+	likeDel(likeCreate(get_db(), my_acc->id, post->authorId, post->id));
 
-	if(kvFindList(req->queryString, "r")) {
-		char sbuff[1024];
-		snprintf(sbuff, 21, "/profile/%d/", post->authorId);
-		return responseNewRedirect(sbuff);
-	}
+	if(kvFindList(req->queryString, "r"))
+		snprintf(redir_to, 32, "/profile/%d/", post->authorId);
 
 fail:
-	return responseNewRedirect("/dashboard/");
+	accountDel((Account*)my_acc);
+	return responseNewRedirect(redir_to);
 }
 
 static Response* connect(Request* req) {
-	if(!req->account)
-		return NULL;
+	const Account* my_acc = get_account(req->cookies);
+	char redir_to[32] = { "/dashboard/" };
+	if(unlikely(my_acc == NULL))
+		goto fail;
 
-	const int id = get_id(req->uri);
-
-	Account* account = accountGetById(get_db(), id);
+	const Account* account = accountGetById(get_db(), get_id(req->uri));
 	if(!account)
 		goto fail;
 
-	connectionDel(connectionCreate(get_db(), req->account->id, account->id));
+	connectionDel(connectionCreate(get_db(), my_acc->id, account->id));
 
-	char sbuff[1024];
-	snprintf(sbuff, 21, "/profile/%d/", account->id);
-	return responseNewRedirect(sbuff);
+	snprintf(redir_to, 32, "/profile/%d/", account->id);
 
 fail:
-	return responseNewRedirect("/dashboard/");
+	accountDel((Account*)my_acc);
+	return responseNewRedirect(redir_to);
 }
 
 static Response* search(Request* req) {
-	if(!req->account)
+	const Account* my_acc = get_account(req->cookies);
+	if(unlikely(my_acc == NULL))
 		return responseNewRedirect("/login/");
+	accountDel((Account*)my_acc);
 
 	char* query = kvFindList(req->queryString, "q");
 
@@ -493,8 +509,11 @@ static Response* search(Request* req) {
 }
 
 static Response* login(Request* req) {
-	if(req->account)
+	const Account* my_acc = get_account(req->cookies);
+	if(unlikely(my_acc != NULL)) {	// It's not usually logined
+		accountDel((Account*)my_acc);
 		return responseNewRedirect("/dashboard/");
+	}
 
 	Response* response = responseNew();
 	Template* template = templateNew("templates/login.html");
@@ -541,17 +560,25 @@ static Response* login(Request* req) {
 }
 
 static Response* logout(Request* req) {
-	if(!req->account)
+	const Account* my_acc = get_account(req->cookies);
+	if(unlikely(my_acc == NULL)) {	// It's usually logined
+		accountDel((Account*)my_acc);
 		return responseNewRedirect("/");
+	}
 
 	Response* response = responseNewRedirect("/");
+	// Reset cookie
 	responseAddCookie(response, "sid", "", NULL, NULL, -1);
 	return response;
 }
 
 static Response* signup(Request* req) {
-	if(req->account)
+	const Account* my_acc = get_account(req->cookies);
+	if(unlikely(my_acc != NULL)) {
+		// If you already logined, you should not regist
+		accountDel((Account*)my_acc);
 		return responseNewRedirect("/dashboard/");
+	}
 
 	Response* response = responseNew();
 	Template* template = templateNew("templates/signup.html");
@@ -561,11 +588,11 @@ static Response* signup(Request* req) {
 
 	if(req->method == POST) {
 		bool valid = true;
-		char* name = kvFindList(req->postBody, "name");
-		char* email = kvFindList(req->postBody, "email");
-		char* username = kvFindList(req->postBody, "username");
-		char* password = kvFindList(req->postBody, "password");
-		char* confirmPassword = kvFindList(req->postBody, "confirm-password");
+		const char* name = kvFindList(req->postBody, "name");
+		const char* email = kvFindList(req->postBody, "email");
+		const char* username = kvFindList(req->postBody, "username");
+		const char* password = kvFindList(req->postBody, "password");
+		const char* confirmPassword = kvFindList(req->postBody, "confirm-password");
 
 		if(!name) {
 			invalid("nameError", "You must enter your name!");
@@ -641,22 +668,14 @@ static Response* signup(Request* req) {
 	return response;
 }
 
-static Response* about(Request* req) {
-	Response* response = responseNew();
-	Template* template = templateNew("templates/about.html");
-	templateSet(template, "active", "about");
-	templateSet(template, "loggedIn", req->account ? "t" : "");
-	templateSet(template, "subtitle", "About");
-	responseSetStatus(response, OK);
-	responseSetBody(response, templateRender(template));
-	templateDel(template);
-	return response;
-}
-
 static Response* notFound(Request* req) {
+	const Account* my_acc = get_account(req->cookies);
+	const int is_loggedIn = !!my_acc;
+	accountDel((Account*)my_acc);
+
 	Response* response = responseNew();
 	Template* template = templateNew("templates/404.html");
-	templateSet(template, "loggedIn", req->account ? "t" : "");
+	templateSet(template, "loggedIn", is_loggedIn ? "t" : "");
 	templateSet(template, "subtitle", "404 Not Found");
 	responseSetStatus(response, NOT_FOUND);
 	responseSetBody(response, templateRender(template));

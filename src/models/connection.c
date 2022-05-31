@@ -47,16 +47,15 @@ Connection* connectionGetByAccountIds(sqlite3* DB, int account1Id, int account2I
 	if(account1Id == -1 || account2Id == -1)
 		return NULL;
 
-	int rc;
 	Connection* connection = NULL;
-	sqlite3_stmt* statement;
+	sqlite3_stmt* statement = NULL;
 
-	rc = sqlite3_prepare_v2(DB,
-							"SELECT id, createdAt, account1, account2"
-							"  FROM connections"
-							" WHERE account1 = ?"
-							"   AND account2 = ?",
-							-1, &statement, NULL);
+	int rc = sqlite3_prepare_v2(DB,
+								"SELECT id, createdAt, account1, account2"
+								"  FROM connections"
+								" WHERE account1 = ?"
+								"   AND account2 = ?",
+								-1, &statement, NULL);
 
 	if(rc != SQLITE_OK)
 		return NULL;
