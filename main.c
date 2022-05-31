@@ -19,6 +19,7 @@
 Server* server = NULL;
 sqlite3* DB = NULL;
 
+static int invalid(Template* template, const char* key, const char* value);
 static void sig(int signum);
 static void createDB(const char* e);
 static void initDB();
@@ -79,11 +80,11 @@ int main(int argc, char* argv[]) {
 
 /* handlers */
 
-#define invalid(k, v)                \
-	{                                \
-		templateSet(template, k, v); \
-		valid = false;               \
-	}
+static int invalid(Template* template, const char* key, const char* value) {
+	templateSet(template, key, value);
+	int valid = false;
+	return valid;
+}
 
 static void sig(int signum) {
 	if(server)
@@ -521,14 +522,14 @@ static Response* login(Request* req) {
 		char* password = kvFindList(req->postBody, "password");
 
 		if(!username) {
-			invalid("usernameError", "Username missing!");
+			valid = invalid(template, "usernameError", "Username missing!");
 		}
 		else {
 			templateSet(template, "formUsername", username);
 		}
 
 		if(!password) {
-			invalid("passwordError", "Password missing!");
+			valid = invalid(template, "passwordError", "Password missing!");
 		}
 
 		if(valid) {
@@ -542,7 +543,7 @@ static Response* login(Request* req) {
 				return response;
 			}
 			else {
-				invalid("usernameError", "Invalid username or password.");
+				valid = invalid(template, "usernameError", "Invalid username or password.");
 			}
 		}
 	}
@@ -583,56 +584,61 @@ static Response* signup(Request* req) {
 		char* confirmPassword = kvFindList(req->postBody, "confirm-password");
 
 		if(!name) {
-			invalid("nameError", "You must enter your name!");
+			valid = invalid(template, "nameError", "You must enter your name!");
 		}
 		else if(strlen(name) < 5 || strlen(name) > 50) {
-			invalid("nameError", "Your name must be between 5 and 50 characters long.");
+			valid = invalid(template, "nameError",
+							"Your name must be between 5 and 50 characters long.");
 		}
 		else {
 			templateSet(template, "formName", name);
 		}
 
 		if(!email) {
-			invalid("emailError", "You must enter an email!");
+			valid = invalid(template, "emailError", "You must enter an email!");
 		}
 		else if(strchr(email, '@') == NULL) {
-			invalid("emailError", "Invalid email.");
+			valid = invalid(template, "emailError", "Invalid email.");
 		}
 		else if(strlen(email) < 3 || strlen(email) > 50) {
-			invalid("emailError", "Your email must be between 3 and 50 characters long.");
+			valid = invalid(template, "emailError",
+							"Your email must be between 3 and 50 characters long.");
 		}
 		else if(!accountCheckEmail(DB, email)) {
-			invalid("emailError", "This email is taken.");
+			valid = invalid(template, "emailError", "This email is taken.");
 		}
 		else {
 			templateSet(template, "formEmail", email);
 		}
 
 		if(!username) {
-			invalid("usernameError", "You must enter a username!");
+			valid = invalid(template, "usernameError", "You must enter a username!");
 		}
 		else if(strlen(username) < 3 || strlen(username) > 50) {
-			invalid("usernameError", "Your username must be between 3 and 50 characters long.");
+			valid = invalid(template, "usernameError",
+							"Your username must be between 3 and 50 characters long.");
 		}
 		else if(!accountCheckUsername(DB, username)) {
-			invalid("usernameError", "This username is taken.");
+			valid = invalid(template, "usernameError", "This username is taken.");
 		}
 		else {
 			templateSet(template, "formUsername", username);
 		}
 
 		if(!password) {
-			invalid("passwordError", "You must enter a password!");
+			valid = invalid(template, "passwordError", "You must enter a password!");
 		}
 		else if(strlen(password) < 8) {
-			invalid("passwordError", "Your password must be at least 8 characters long!");
+			valid = invalid(template, "passwordError",
+							"Your password must be at least 8 characters long!");
 		}
 
 		if(!confirmPassword) {
-			invalid("confirmPasswordError", "You must confirm your password.");
+			valid = invalid(template, "confirmPasswordError", "You must confirm your password.");
 		}
 		else if(strcmp(password, confirmPassword) != 0) {
-			invalid("confirmPasswordError", "The two passwords must be the same.");
+			valid =
+				invalid(template, "confirmPasswordError", "The two passwords must be the same.");
 		}
 
 		if(valid) {
@@ -646,7 +652,7 @@ static Response* signup(Request* req) {
 				return response;
 			}
 			else {
-				invalid("nameError", "Unexpected error. Please try again later.");
+				valid = invalid(template, "nameError", "Unexpected error. Please try again later.");
 			}
 		}
 	}

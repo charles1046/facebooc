@@ -21,7 +21,7 @@ TEST_UNIT_OBJ = \
 
 TEST_UNIT = $(wildcard tests/http/*.o)
 
-c_codes := $(wildcard include/*.h include/models/*.h src/*.c src/models/*.c tests/http/*.c)
+c_codes := $(wildcard include/*.h include/models/*.h src/*.c src/models/*.c tests/http/*.c *.c)
 
 scss_dir = static/scss/
 css_dir = static/css/
@@ -57,7 +57,7 @@ tests/%.o: tests/%.c $(OBJS)
 
 test: $(TEST_UNIT_OBJ)
 	@echo Do testing...
-	@python3 tests/driver.py
+	@tests/driver.py
 	@echo done
 
 release: before_release html-updater gen-css
