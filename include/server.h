@@ -15,7 +15,7 @@ struct Server {
 	Handler default_callback;
 };
 
-Server* serverNew(uint16_t);
+Server* serverNew(const uint16_t port);
 void serverAddHandler(Server* server, const char* route_name, Handler handler);
 void set_callback(Server* server, Handler handler);
 void serverDel(Server* server);
