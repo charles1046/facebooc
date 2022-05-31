@@ -522,8 +522,6 @@ static Response* login(Request* req) {
 	templateSet(template, "subtitle", "Login");
 
 	if(req->method == POST) {
-		bool valid = true;
-
 		char* username = kvFindList(req->postBody, "username");
 		char* password = kvFindList(req->postBody, "password");
 
@@ -538,6 +536,8 @@ static Response* login(Request* req) {
 			invalid("passwordError", "Password missing!");
 		}
 
+		bool valid = account_auth(get_db(), username, password);
+
 		if(valid) {
 			Session* session = sessionCreate(get_db(), username, password);
 			if(session) {
@@ -551,6 +551,9 @@ static Response* login(Request* req) {
 			else {
 				invalid("usernameError", "Invalid username or password.");
 			}
+		}
+		else {
+			invalid(template, "usernameError", "Invalid username or password.");
 		}
 	}
 
