@@ -1,0 +1,73 @@
+/* index.html */
+
+
+/* Carousel base class */
+
+main#index .carousel {
+    margin-bottom: 4rem;
+    z-index: 1;
+    /* Declare heights because of positioning of img element */
+    .carousel-item {
+        height: 32rem;
+        /* Since positioning the image, we need to help out the caption */
+        .carousel-caption {
+            bottom: 3rem;
+            z-index: 10;
+            h1,
+            h2 {
+                margin-bottom: 0.5rem;
+                padding: 5px;
+                font-size: 2.5em;
+                font-weight: 500;
+                line-height: 1.2;
+                border-bottom: 2px solid white;
+            }
+            p {
+                margin-bottom: 1.25rem;
+                padding: 5px;
+                font-size: 1.25rem;
+                line-height: 1.4;
+                a.btn {
+                    color: #ffffff;
+                    background-color: #FC5185;
+                    font-size: 16px;
+                    border-radius: 6px;
+                    box-shadow: 0px 4px #7C2842;
+                    &:hover {
+                        color: #BFBFBF;
+                        background-color: #BC3D63;
+                        box-shadow: 0px 4px #3C1320;
+                    }
+                    &:active {
+                        box-shadow: 0px 0px #3C1320;
+                        top: 4px;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/* Hero part */
+
+main#index .hero {
+    z-index: 2;
+    .container {
+        h2 {
+            margin-bottom: 0.5rem;
+        }
+        .overflow-hidden {
+            max-height: 30vh;
+        }
+    }
+    a.btn {
+        background-color: #364f6b;
+        border: 0;
+        color: #ffffff;
+        width: 100%;
+        &:hover {
+            color: #3fc1c9;
+        }
+    }
+}

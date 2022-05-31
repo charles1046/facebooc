@@ -1,42 +1,47 @@
-<nav class="navbar">
-    <a class="navbar-brand pull-left" href="/">facebooc</a>
-    <ul class="navbar-list pull-right">
-        <li class="navbar-item visible {%when active login active%} {%when loggedIn t hidden%} "><a href="/login/">Login</a></li>
-        <li class="navbar-item visible {%when active signup active%} {%when loggedIn t hidden%} "><a href="/signup/">Sign Up</a></li>
-        <li class="navbar-item {%when loggedIn t visible%} ">
-		    <form action="/search/" method="GET" class="form-inline">
-		    	<input type="text"
-		    	       class="form-control search"
-		    	       placeholder="Search for people..."
-		    	       name="q"
-		    	       value="{{searchQuery}}" />
-		    </form>
-		</li>
-        <li class="navbar-item {%when active dashboard active%}  {%when loggedIn t visible%} "><a href="/dashboard/">Dashboard</a></li>
-        <li class="navbar-item {%when loggedIn t visible%} "><a href="/logout/">Logout</a></li>
-    </ul>
-</nav>
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+        <a class="navbar-brand pull-left fs-2" href="/">facebooc</a>
 
-<div class="hamburger">
-    <input type="checkbox" class="toggle" />
+        <button class="navbar-toggler shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbartoggle" aria-controls="navbartoggle" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-    <span></span>
-    <span></span>
-    <span></span>
+        <div class="collapse navbar-collapse" id="navbartoggle">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item visible {%when active login hidden%} {%when loggedIn t hidden%} ">
+                    <a class="nav-link" href="#about">About</a>
+                </li>
 
-    <ul class="hamburger-list">
-        <li class="hamburger-item visible {%when active login active%} {%when loggedIn t hidden%} "><a href="/login/">Login</a></li>
-        <li class="hamburger-item visible {%when active signup active%} {%when loggedIn t hidden%} "><a href="/signup/">Sign Up</a></li>
-        <li class="hamburger-item {%when loggedIn t visible%} ">
-            <form action="/search/" method="GET" class="form-inline">
-                <input type="text"
-                       class="form-control search"
-                       placeholder="Search for people..."
-                       name="q"
-                       value="{{searchQuery}}" />
+                <li class="nav-item visible {%when active login hidden%} {%when loggedIn t hidden%} ">
+                    <a class="nav-link" href="#require">Tutorial</a>
+                </li>
+
+                <li class="nav-item visible {%when active login hidden%} {%when loggedIn t hidden%} ">
+                    <a class="nav-link" href="#license">License</a>
+                </li>
+            </ul>
+
+            <ul class="navbar-nav">
+                <li class="nav-item visible {%when active login active%} {%when loggedIn t hidden%} ">
+                    <a class="nav-link" href="/login/">Login</a>
+                </li>
+
+                <li class="nav-item visible {%when active signup active%} {%when loggedIn t hidden%} ">
+                    <a class="nav-link" href="/signup/">Sign Up</a>
+                </li>
+
+                <li class="nav-item {%when active dashboard active%}  {%when loggedIn t visible%} ">
+                    <a class="nav-link" href="/dashboard/">Dashboard</a>
+                </li>
+
+                <li class="nav-item {%when loggedIn t visible%} ">
+                    <a class="nav-link" href="/logout/">Logout</a>
+                </li>
+            </ul>
+
+            <form class=" {%when loggedIn t visible%} " role="search" action="/search/" method="GET">
+                <input type="text" class="form-control" placeholder="Search for people..." name="q" value="{{searchQuery}}" aria-label="Search" />
             </form>
-        </li>
-        <li class="hamburger-item {%when active dashboard active%}  {%when loggedIn t visible%} "><a href="/dashboard/">Dashboard</a></li>
-        <li class="hamburger-item {%when loggedIn t visible%} "><a href="/logout/">Logout</a></li>
-    </ul>
-</div>
+        </div>
+    </div>
+</nav>

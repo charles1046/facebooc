@@ -37,7 +37,11 @@ $(EXEC): $(OBJS)
 html-updater: $(EXEC)
 	@scripts/auto-update-html.sh
 
-run: $(EXEC) html-updater
+gen-css:
+	mkdir -p static/css/
+	sassc ./static/scss/main.scss ./static/css/main.css
+
+run: $(EXEC) html-updater gen-css
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
 
@@ -53,7 +57,7 @@ test: $(TEST_UNIT_OBJ)
 	@tests/driver.py
 	@echo done
 
-release: before_release html-updater
+release: before_release html-updater gen-css
 
 format:
 	@echo start formatting...

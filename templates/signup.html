@@ -1,65 +1,71 @@
 {%include templates/header.html%}
-<form action="" method="POST" id="main-form" role="form">
-    <div class="title">Sign Up</div>
-    <div class="form-group">
-        <label for="username">
-            Name
-        </label>
-        <input type="text"
-               class="form-control"
-               id="name"
-               name="name"
-               value="{{formName}}"
-               autofocus />
-        <div class="alert">{{nameError}}</div>
-    </div>
+<body class="text-center">
+    <main class="form-signin w-100 m-auto">
+        <form action="" method="POST" id="main-form" role="form">
+            <h1 class="h3 mb-3 fw-normal">Sign Up</h1>
+      
+            <div class="form-floating mb-3">
+                <input type="text"
+                       class="form-control shadow-none"
+                       id="name"
+                       placeholder="Name"
+                       name="name"
+                       value="{{formName}}"
+                       autofocus/>
+                <div class="alert">{{nameError}}</div>
+                
+                <label for="username">Name</label>
+            </div>
 
-    <div class="form-group">
-        <label for="email">
-            Email
-        </label>
-        <input type="text"
-               class="form-control"
-               id="email"
-               name="email"
-               value="{{formEmail}}" />
-        <div class="alert">{{emailError}}</div>
-    </div>
+            <div class="form-floating mb-3">
+                <input type="text"
+                       class="form-control shadow-none"
+                       id="email"
+                       placeholder="Email"
+                       name="email"
+                       value="{{formEmail}}"/>
+                <div class="alert">{{emailError}}</div>
 
-    <div class="form-group">
-        <label for="username">
-            Username
-        </label>
-        <input type="text"
-               class="form-control"
-               id="username"
-               name="username"
-               value="{{formUsername}}" />
-        <div class="alert">{{usernameError}}</div>
-    </div>
+                <label for="email">Email</label>
+            </div>
 
-    <div class="form-group">
-        <label for="password">
-            Password
-        </label>
-        <input type="password"
-               class="form-control"
-               id="password"
-               name="password" />
-        <div class="alert">{{passwordError}}</div>
-    </div>
+            <div class="form-floating mb-3">
+                <input type="text"
+                       class="form-control shadow-none"
+                       id="username"
+                       placeholder="Username"
+                       name="username"
+                       value="{{formUsername}}"/>
+                <div class="alert">{{usernameError}}</div>
 
-    <div class="form-group">
-        <label for="confirm-password">
-            Confirm password
-        </label>
-        <input type="password"
-               class="form-control"
-               id="confirm-password"
-               name="confirm-password" />
-        <div class="alert">{{confirmPasswordError}}</div>
-    </div>
+                <label for="username">Username</label>
+            </div>
 
-    <input class="btn btn-default" type="submit" value="Submit"/>
-</form>
-{%include templates/footer.html%}
+            <div class="form-floating mb-3">
+                <input type="password"
+                       class="form-control shadow-none"
+                       id="password"
+                       placeholder="Password"
+                       name="password"/>
+                <div class="alert">{{passwordError}}</div>
+
+                <label for="password">Password</label>
+            </div>
+
+            <div class="form-floating">
+                <input type="password"
+                       class="form-control shadow-none"
+                       id="confirm-password"
+                       placeholder="Confirm password"
+                       name="confirm-password"/>
+                <div class="alert">{{confirmPasswordError}}</div>
+
+                <label for="confirm-password">Confirm password</label>
+            </div>
+
+            <input class="btn" type="submit" value="Submit"/>
+
+            <p class="mt-5 mb-3 text-muted fs-8"> {%include templates/version.html%} </p>
+        </form>
+    </main>
+</body>

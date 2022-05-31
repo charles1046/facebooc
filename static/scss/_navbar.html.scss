@@ -1,0 +1,40 @@
+/* navbar.html */
+
+nav {
+    background-color: #364f6b;
+    .container {
+        button.navbar-toggler {
+            border: none;
+            background-color: none;
+            span.navbar-toggler-icon {
+                color: #3fc1c9;
+            }
+        }
+    }
+    .collapse {
+        form {
+            margin-left: 20px;
+        }
+        li,
+        form {
+            display: none;
+            &.visible {
+                display: inline;
+            }
+            &.hidden {
+                display: none;
+            }
+        }
+        li {
+            border-bottom: #364f6b solid 1px;
+            margin: auto;
+            margin-left: 0px;
+            &.active {
+                border-bottom: white solid 1px;
+                a {
+                    color: white;
+                }
+            }
+        }
+    }
+}
