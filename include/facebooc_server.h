@@ -5,7 +5,7 @@
 
 typedef struct Facebooc Facebooc;
 
-Facebooc* FB_new(uint16_t port);
+Facebooc* FB_new(const uint16_t port);
 int FB_run(Facebooc* s);
 void FB_delete(Facebooc* s);
 
