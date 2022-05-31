@@ -6,6 +6,7 @@
 #include "http/http.h"
 #include "kv.h"
 #include "request.h"
+#include "utility.h"
 
 static inline _Bool set_method(Request* req, const char* segment) {
 	static const char* methods__[] = {
@@ -33,7 +34,6 @@ static inline Request* request_ctor() {
 	request->postBody = NULL;
 	request->headers = NULL;
 	request->cookies = NULL;
-	request->account = NULL;
 	return request;
 }
 
@@ -150,9 +150,7 @@ void requestDel(Request* req) {
 	if(req->headers)
 		kvDelList((Node*)req->headers);
 	if(req->cookies)
-		kvDelList((Node*)req->cookies);
-	if(req->account)
-		accountDel(req->account);
+		Cookie_delete((Cookie*)req->cookies);
 
 	free(req);
 }

@@ -5,7 +5,8 @@
 #include "models/account.h"
 #include "models/session.h"
 
-Account* accountNew(int id, int createdAt, char* name, char* email, char* username) {
+Account* accountNew(int id, int createdAt, const char* name, const char* email,
+					const char* username) {
 	Account* account = malloc(sizeof(Account));
 
 	account->id = id;
@@ -47,7 +48,8 @@ fail:
 	return account;
 }
 
-Account* accountCreate(sqlite3* DB, char* name, char* email, char* username, char* password) {
+Account* accountCreate(sqlite3* DB, const char* name, const char* email, const char* username,
+					   const char* password) {
 	int rc;
 	Account* account = NULL;
 	sqlite3_stmt* statement;
@@ -83,7 +85,7 @@ fail:
 	return account;
 }
 
-Account* accountGetByEmail(sqlite3* DB, char* email) {
+Account* accountGetByEmail(sqlite3* DB, const char* email) {
 	if(!email)
 		return NULL;
 
@@ -115,6 +117,7 @@ fail:
 }
 
 Account* accountGetBySId(sqlite3* DB, const char* sid) {
+	// TODO: Add some random seeds here
 	if(!sid)
 		return NULL;
 
@@ -149,7 +152,7 @@ fail:
 	return account;
 }
 
-Node* accountSearch(sqlite3* DB, char* query, int page) {
+Node* accountSearch(sqlite3* DB, const char* query, int page) {
 	if(!query)
 		return NULL;
 
@@ -193,7 +196,7 @@ fail:
 	return accounts;
 }
 
-bool accountCheckUsername(sqlite3* DB, char* username) {
+bool accountCheckUsername(sqlite3* DB, const char* username) {
 	bool res;
 	sqlite3_stmt* statement;
 
@@ -214,7 +217,7 @@ bool accountCheckUsername(sqlite3* DB, char* username) {
 	return res;
 }
 
-bool accountCheckEmail(sqlite3* DB, char* email) {
+bool accountCheckEmail(sqlite3* DB, const char* email) {
 	bool res;
 	sqlite3_stmt* statement;
 

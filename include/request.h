@@ -3,8 +3,8 @@
 
 #include <string.h>
 
+#include "http/cookies.h"
 #include "list.h"
-#include "models/account.h"
 
 typedef enum Method {
 	OPTIONS,
@@ -26,27 +26,11 @@ typedef struct Request {
 
 	const Node* queryString;
 	const Node* postBody;
-	const Node* cookies;
+	const Cookie* cookies;
 	const Node* headers;
-
-	Account* account;  // Don't worry. You're doing fine. Game is hard.
 } Request;
 
 Request* requestNew(char*);
 void requestDel(Request*);
-
-#define EXACT_ROUTE(req, routeString)                        \
-	{                                                        \
-		const char* route = routeString "\0";                \
-		if(strncmp(req->uri, route, strlen(route) + 1) != 0) \
-			return NULL;                                     \
-	}
-
-#define ROUTE(req, routeString)                          \
-	{                                                    \
-		const char* route = routeString;                 \
-		if(strncmp(req->uri, route, strlen(route)) != 0) \
-			return NULL;                                 \
-	}
 
 #endif

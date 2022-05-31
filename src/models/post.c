@@ -3,7 +3,7 @@
 #include "bs.h"
 #include "models/post.h"
 
-Post* postNew(int id, int createdAt, int authorId, char* body) {
+Post* postNew(int id, int createdAt, int authorId, const char* body) {
 	Post* post = malloc(sizeof(Post));
 
 	post->id = id;
@@ -14,7 +14,7 @@ Post* postNew(int id, int createdAt, int authorId, char* body) {
 	return post;
 }
 
-Post* postCreate(sqlite3* DB, int authorId, char* body) {
+Post* postCreate(sqlite3* DB, int authorId, const char* body) {
 	int rc, t;
 	Post* post = NULL;
 	sqlite3_stmt* statement;

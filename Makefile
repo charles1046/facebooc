@@ -1,13 +1,13 @@
 CFLAGS = -std=c11 -Wall -Wextra -Werror -g -I include
 LDFLAGS = -lsqlite3 -lpthread -ldl -lm
 
-UNAME_S = $(shell uname -s)
-GIT_HOOKS := .git/hooks/applied
-
 # strtok_r is provided by POSIX.1c-1995 and POSIX.1i-1995, however, with
 # the POSIX_C_SOURCE=1 on Mac OS X is corresponding to the version of
 # 1988 which is too old (defined in sys/cdefs.h)
-CFLAGS += -D_POSIX_C_SOURCE=199506L
+CFLAGS += -D_POSIX_C_SOURCE=200809L
+
+UNAME_S = $(shell uname -s)
+GIT_HOOKS := .git/hooks/applied
 
 OUT = bin
 EXEC = $(OUT)/facebooc
@@ -41,9 +41,10 @@ html-updater: $(EXEC)
 	@scripts/auto-update-html.sh
 
 gen-css:
-	sass $(scss_dir):$(css_dir)
+	mkdir -p static/css/
+	sassc ./static/scss/main.scss ./static/css/main.css
 
-run: $(EXEC) html-updater
+run: $(EXEC) html-updater gen-css
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
 
@@ -56,15 +57,15 @@ tests/%.o: tests/%.c $(OBJS)
 
 test: $(TEST_UNIT_OBJ)
 	@echo Do testing...
-	@python3 tests/driver.py
+	@tests/driver.py
 	@echo done
 
-release: before_release html-updater
+release: before_release html-updater gen-css
 
 format:
 	@echo start formatting...
 	@for f in $(c_codes); do \
-		clang-format -style=file -i $$f ; \
+		clang-format -i $$f ; \
 	done
 	@echo finish format!
 

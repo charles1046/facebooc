@@ -1,7 +1,15 @@
 # Facebooc
 
 Proof-of-concept Facebook clone in C.
-The only dependency is SQLite3.
+The only dependency is SQLite3 in C runtime.
+
+# Collaboration dependentcies
+```
+sudo apt-get install sassc    \ 
+                     cppcheck \
+                     aspell   \
+                     build-essential
+````
 
 # Prerequisites
 Install SQLite development package:

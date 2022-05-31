@@ -47,7 +47,7 @@ Response* responseNew() {
 	return response;
 }
 
-Response* responseNewRedirect(char* location) {
+Response* responseNewRedirect(const char* location) {
 	Response* response = responseNew();
 
 	responseSetStatus(response, FOUND);

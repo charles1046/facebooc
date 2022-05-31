@@ -84,7 +84,7 @@ char* bsRandom(uint32_t len, char* suffix) {
 	return bs;
 }
 
-char* bsEscape(char* bs) {
+char* bsEscape(const char* bs) {
 	char* copy = bsNew(bs);
 	char* res = bsNew("");
 
