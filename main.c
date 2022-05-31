@@ -19,7 +19,7 @@
 Server* server = NULL;
 sqlite3* DB = NULL;
 
-static int invalid(Template* template, char* key, char* value);
+static int invalid(Template* template, const char* key, const char* value);
 static void sig(int signum);
 static void createDB(const char* e);
 static void initDB();
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
 
 /* handlers */
 
-static int invalid(Template* template, char* key, char* value) {
+static int invalid(Template* template, const char* key, const char* value) {
 	templateSet(template, key, value);
 	int valid = false;
 	return valid;

@@ -22,7 +22,7 @@ void templateDel(Template* template) {
 	free(template);
 }
 
-void templateSet(Template* template, char* key, char* value) {
+void templateSet(Template* template, const char* key, const char* value) {
 	template->context = insert(kvNew(key, value), sizeof(KV), template->context);
 }
 
