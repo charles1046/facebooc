@@ -7,3 +7,5 @@ db.sqlite3
 data/*
 deploy_updater/.env
 templates/version.html
+.idea
+static/css/
