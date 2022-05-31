@@ -15,3 +15,9 @@ void SPair_delete(SPair* p) {
 	free(p->value);
 	free(p);
 }
+
+void SSPair_delete(SSPair* p) {
+	free(p->key);
+	free(p->value);
+	free(p);
+}

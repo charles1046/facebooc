@@ -3,11 +3,12 @@
 
 #include <sqlite3.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "list.h"
 
 typedef struct Account {
-	int id;
+	int32_t id;
 	int createdAt;
 
 	char* name;
@@ -15,14 +16,17 @@ typedef struct Account {
 	char* username;
 } Account;
 
-Account* accountNew(int, int, char*, char*, char*);
-Account* accountCreate(sqlite3*, char*, char*, char*, char*);
+// !FIXME: Write comments, what do they do?
+// !Please notice the uid is int32_t
+Account* accountNew(int, int, const char*, const char*, const char*);
+Account* accountCreate(sqlite3*, const char* name, const char* email, const char* username,
+					   const char* password);
 Account* accountGetById(sqlite3*, int);
-Account* accountGetByEmail(sqlite3*, char*);
+Account* accountGetByEmail(sqlite3*, const char*);
 Account* accountGetBySId(sqlite3*, const char*);
-Node* accountSearch(sqlite3*, char*, int);
-bool accountCheckUsername(sqlite3*, char*);
-bool accountCheckEmail(sqlite3*, char*);
+Node* accountSearch(sqlite3*, const char*, int);
+bool accountCheckUsername(sqlite3*, const char* username);
+bool accountCheckEmail(sqlite3*, const char* email);
 void accountDel(Account*);
 
 #endif
