@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
 		server_port = 8080;
 	}
 
-	Server* server = serverNew(server_port);
+	server = serverNew(server_port);
 	serverAddHandler(server, notFound);
 	serverAddStaticHandler(server);
 	serverAddHandler(server, about);

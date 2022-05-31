@@ -41,7 +41,7 @@ gen-css:
 	mkdir -p static/css/
 	sassc ./static/scss/main.scss ./static/css/main.css
 
-run: $(EXEC) html-updater
+run: $(EXEC) html-updater gen-css
 	@echo "Starting Facebooc service..."
 	@./$(EXEC) $(port)
 
