@@ -4,16 +4,23 @@
 
 #include "list.h"
 
-Node* insert(const void* value, size_t size, const Node* next) {
+Node* insert(const void* restrict value, size_t size, const Node* restrict next) {
 	Node* new_node = malloc(sizeof(Node));
-	assert(new_node);
-	new_node->value = malloc(size);	 // Bypass const
-	assert(new_node->value);
+	*(void**)(&new_node->value) = malloc(size);	 // Bypass const
 
 	new_node->next = (Node*)next;
 	*(size_t*)(&new_node->size) = size;	 // Bypass const
 
 	memcpy((void*)new_node->value, value, size);
+
+	return new_node;
+}
+
+Node* insert_move(void* restrict value, const Node* restrict next) {
+	Node* new_node = malloc(sizeof(Node));
+	*(void**)(&new_node->value) = value;
+	new_node->next = (Node*)next;
+	value = NULL;
 
 	return new_node;
 }

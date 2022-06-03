@@ -2,9 +2,9 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "http/http.h"
-#include "kv.h"
 #include "request.h"
 #include "utility.h"
 
@@ -144,13 +144,13 @@ void requestDel(Request* req) {
 	if(req->path)
 		free((char*)req->path);
 	if(req->queryString)
-		kvDelList((Node*)req->queryString);
+		query_delete((Query*)req->queryString);
 	if(req->postBody)
-		kvDelList((Node*)req->postBody);
+		body_delete((Body*)req->postBody);
 	if(req->headers)
-		kvDelList((Node*)req->headers);
+		header_delete((Header*)req->headers);
 	if(req->cookies)
-		Cookie_delete((Cookie*)req->cookies);
+		Cookie_delete((Cookies*)req->cookies);
 
 	free(req);
 }

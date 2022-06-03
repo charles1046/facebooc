@@ -16,7 +16,8 @@ typedef struct node {
 	const size_t size;
 } Node;
 
-Node* insert(const void* value, size_t size, const Node* next);
+Node* insert(const void* restrict value, size_t size, const Node* restrict next);
+Node* insert_move(void* restrict value, const Node* restrict next);
 
 // head will be NULL
 void clear(Node* head);
