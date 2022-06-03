@@ -9,9 +9,9 @@ static void createDB(sqlite3* DB, const char* e);
 
 void initDB() {
 	const char* db_path = getenv("DB_PATH");
-	if(!db_path){
+	if(!db_path) {
 		struct stat buf;
-		if (stat("./data", &buf) == -1)
+		if(stat("./data", &buf) == -1)
 			mkdir("./data", 0700);
 		db_path = "./data/db.sqlite3";
 	}
