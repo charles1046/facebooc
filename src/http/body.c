@@ -16,20 +16,21 @@ struct Body {
 	Node* head;
 };
 
-#define SPAIR(node) ((SPair*)node->value)
+#define SPAIR(node) ((SPair*)(node)->value)
 
 // If you want to implement Content-Type please refer RFC 2616 7.1
 
-static inline _Bool is_sepported_type(const char* str) {
+static inline _Bool is_supported_type(const char* str) {
 	if(!str)
 		return false;
-	return !strncmp(str, "application/x-www-form-urlencoded", 34);
+	return !strncmp(str, "application/x-www-form-urlencoded", 33);
 }
 
 static inline _Bool check_header(const Header* header) {
 	const char* content_type = header_get(header, "content-type");
-	if(content_type)
-		return is_sepported_type(content_type);
+	if(content_type) {
+		return is_supported_type(content_type);
+	}
 	return false;
 }
 
