@@ -21,8 +21,6 @@ struct Body {
 // If you want to implement Content-Type please refer RFC 2616 7.1
 
 static inline _Bool is_supported_type(const char* str) {
-	if(!str)
-		return false;
 	return !strncmp(str, "application/x-www-form-urlencoded", 33);
 }
 
