@@ -40,15 +40,15 @@ Header* header_parser(char* restrict buf, size_t* restrict offset) {
 		if(line.size == 0)	// empty line, that is the end of header
 			break;
 
-		const char* seperator = find_first_of(line.begin, ":");
-		assert(seperator);
+		const char* separator = find_first_of(line.begin, ":");
+		assert(separator);
 
 		struct string_view key = { .begin = line.begin,
-								   .end = seperator,
-								   .size = seperator - line.begin };
-		struct string_view value = { .begin = seperator + 1,
+								   .end = separator,
+								   .size = separator - line.begin };
+		struct string_view value = { .begin = separator + 1,
 									 .end = line.end,
-									 .size = line.end - (seperator + 1) };
+									 .size = line.end - (separator + 1) };
 		CONST_INIT(*key.end, (char)0);	  // Force set ':' to '\0'
 		CONST_INIT(*value.end, (char)0);  // Force set '\r' to '\0'
 
@@ -94,17 +94,22 @@ void header_insert_move(Header* restrict h, SSPair* restrict p) {
 }
 
 void* header_get(const Header* restrict h, const char* restrict key) {
-	if(unlikely(!h || !key || *key))
-		return NULL;
+	if(unlikely(h == NULL))
+		return NULL;  // no header
+
+	if(unlikely(key == NULL))
+		return NULL;  // no key
+
+	if(unlikely(*key == '\0'))
+		return NULL;  // empty key
 
 	Node* cur = h->head;
-	while(cur && strcmp(SSPair(cur)->key, key))
+	while(cur) {
+		if(strcmp(SSPair(cur)->key, key) == 0)
+			return SSPair(cur)->value;
 		cur = cur->next;
-
-	if(cur)	 // Found
-		return SSPair(cur)->value;
-	else
-		return NULL;
+	}
+	return NULL;
 }
 
 static bool header_entry_dtor__(void* p_) {

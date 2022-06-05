@@ -17,7 +17,7 @@ struct Query {
 	Node* head;
 };
 
-#define SPAIR(node) ((SPair*)node->value)
+#define SPAIR(node) ((SPair*)(node)->value)
 
 Query* query_parser(char* buffer) {
 	Query* q = malloc(sizeof(Query));
@@ -29,7 +29,7 @@ Query* query_parser(char* buffer) {
 		}
 
 		// Check if it have '='
-		if(strchr(buffer, '=')) {  // transfter url encoding
+		if(strchr(buffer, '=')) {  // transfer url encoding
 			char* decoded = url_decoder(buffer);
 			SPair* entry = query_entry(decoded);
 			q->head = insert(entry, sizeof(SPair), q->head);
@@ -43,11 +43,17 @@ Query* query_parser(char* buffer) {
 }
 
 void* query_get(const Query* restrict q, const char* restrict key) {
-	if(unlikely(!q || !key || *key))
-		return NULL;
+	if(unlikely(q == NULL))
+		return NULL;  // no query
+
+	if(unlikely(key == NULL))
+		return NULL;  // no key
+
+	if(unlikely(*key == '\0'))
+		return NULL;  // empty key
 
 	Node* cur = q->head;
-	while(cur && strcmp(SPAIR(cur)->key, key))
+	while(cur && strcmp(SPAIR(cur)->key, key) != 0)
 		cur = cur->next;
 
 	if(cur)	 // Found
