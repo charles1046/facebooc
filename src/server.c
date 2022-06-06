@@ -114,10 +114,10 @@ static void serverDelFd(Server* server, int fd) {
 }
 
 static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
-	int nread = 0;
 	char buff[20480];
+	long n_read = recv(fd, buff, sizeof(buff), 0);
 
-	if((nread = recv(fd, buff, sizeof(buff), 0)) < 0) {
+	if(n_read < 0) {
 		if(errno == EAGAIN) {
 			resetOneShot(server->priv, fd);
 		}
@@ -125,8 +125,8 @@ static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
 			fprintf(stderr, "error: read failed\n");
 		}
 	}
-	else if(nread > 0) {
-		buff[nread] = '\0';
+	if(n_read > 0) {
+		buff[n_read] = '\0';
 
 		Request* req = requestNew(buff);
 

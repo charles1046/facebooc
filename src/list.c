@@ -36,11 +36,10 @@ void clear(Node* node) {
 
 _Bool listForEach(Node* node, List_op func) {
 	_Bool result = true;
-	Node** indrect = &node;
-
-	while(*indrect != NULL && result) {
-		result = func((void*)(*indrect)->value);  // Do it
-		indrect = (Node**)&((*indrect)->next);	  // To next
+	Node** indirect = &node;
+	while((*indirect) != NULL && result) {
+		result = func((void*)(*indirect)->value);  // Do it
+		indirect = (Node**)&((*indirect)->next);   // To next
 	}
 
 	return result;
