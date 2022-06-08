@@ -588,7 +588,7 @@ static Response* login(Request* req) {
 
 				// Setting cookie
 				SSPair* cookie = malloc(sizeof(SSPair));
-				cookie->key = "sid";
+				cookie->key = strdup("sid");
 				cookie->value = strdup(session->sessionId);
 				sessionDel(session);
 
