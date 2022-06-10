@@ -33,16 +33,15 @@ static inline void add_handler(Hash_map* handlers, char* handling_name, Handler 
 }
 
 static inline char* get_handling_type(Request* request) {
-	char* handling_type = strdup(request->uri + 1);
-	char* last_slash = strrchr(handling_type, '/');
-	if(last_slash)
-		*last_slash = '\0';
-	return handling_type;
+	char dir[32] = { 0 };  // Suppose single dir is less than 32 char
+	fetch_dir(dir, request->uri + 1);
+	return strdup(dir);
 }
 
 static inline void add_callback_handler(Hash_map* handlers) {
 	add_handler(handlers, "not_found", not_found);
 }
+
 void server_add_handlers(Server* server) {
 	Hash_map* handlers = server->handlers;
 	add_handler(handlers, "signup", signup);
