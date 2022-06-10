@@ -14,14 +14,25 @@ EXEC = $(OUT)/facebooc
 OBJS = \
 	$(patsubst src/%.c,src/%.o, $(wildcard src/*.c) \
 								$(wildcard src/models/*.c) \
-								$(wildcard src/http/*.c))
+								$(wildcard src/http/*.c) \
+								$(wildcard src/handler/*.c) \
+								$(wildcard src/handler/handlers/*.c) \
+								)
 
 TEST_UNIT_OBJ = \
 	$(patsubst tests/%.c,tests/%.o, $(wildcard tests/http/*.c))
 
 TEST_UNIT = $(wildcard tests/http/*.o)
 
-c_codes := $(wildcard include/*.h include/models/*.h src/*.c src/models/*.c tests/http/*.c)
+c_codes := $(wildcard include/*.h \
+						include/models/*.h \
+						include/handler/*.h \
+						include/handler/handlers/*.h \
+						src/*.c \
+						src/models/*.c \
+						src/handler/*.c \
+                        src/handler/handlers/*.c \
+						tests/http/*.c)
 
 scss_dir = static/scss/
 css_dir = static/css/
