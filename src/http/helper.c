@@ -84,7 +84,7 @@ static void urldecode2(char* dst, const char* src) {
 	*dst++ = '\0';
 }
 
-static inline char* string_view_dup(const struct string_view* const sv) {
+char* string_view_dup(const struct string_view* const sv) {
 	char* copy = NULL;
 	if(sv->size != -1) {
 		copy = malloc(sv->size + 1);

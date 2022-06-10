@@ -189,9 +189,9 @@ static Response* static_handler(Request* req) {
 
 	// RESPOND
 	responseSetStatus(response, OK);
-	responseAddHeader(response, &(SSPair){ .key = "Content-Type", .value = (char*)mimeType });
-	responseAddHeader(response, &(SSPair){ .key = "Content-Length", .value = content_len });
-	responseAddHeader(response, &(SSPair){ .key = "Cache-Control", .value = "max-age=2592000" });
+	responseAddHeader(response, eXpire_pair("Content-Type", (char*)mimeType, SSPair));
+	responseAddHeader(response, eXpire_pair("Content-Length", content_len, SSPair));
+	responseAddHeader(response, eXpire_pair("Cache-Control", "max-age=2592000", SSPair));
 	return response;
 }
 
@@ -200,8 +200,8 @@ static const Account* get_account(const Cookies* c) {
 	// TODO: Use an object pool to reduce malloc times
 	if(unlikely(c == NULL))
 		return NULL;
-	const char* sid = Cookie_get(c, "sid");
-	return accountGetBySId(get_db(), sid);
+	Cookie* cookie = Cookies_get(c, "sid");
+	return accountGetBySId(get_db(), Cookie_get_attr(cookie, VALUE));
 }
 
 static Response* home(Request* req) {
@@ -583,24 +583,16 @@ static Response* login(Request* req) {
 		if(valid) {
 			Session* session = sessionCreate(get_db(), username, password);
 			if(session) {
-				responseSetStatus(response, FOUND);
-
 				// Setting cookie
-				SSPair* cookie = malloc(sizeof(SSPair));
-				cookie->key = "sid";
-				cookie->value = strdup(session->sessionId);
+				Cookies* cookie = Cookies_init("sid", session->sessionId);
+				Cookies_set_expire(cookie, "sid", 3600 * 24 * 30);
+				responseAddCookie(response, cookie);
+
 				sessionDel(session);
+				Cookies_delete(cookie);
 
-				Cookie_av* c_av = cookie_av_new();
-				cookie_av_set_expires(c_av, 3600 * 24 * 30);
-
-				// Concatenate
-				concatenate_cookie_av(cookie, c_av);
-				// Move cookie into
-				responseAddHeader_move(response, cookie);
-				cookie_av_delete(c_av);
-
-				responseAddHeader(response, &(SSPair){ .key = "Location", .value = "/dashboard/" });
+				responseSetStatus(response, FOUND);
+				responseAddHeader(response, eXpire_pair("Location", "/dashboard/", SSPair));
 				goto ret;
 			}
 			else {
@@ -627,20 +619,13 @@ static Response* logout(Request* req) {
 	}
 
 	Response* response = responseNewRedirect("/");
-	// Reset cookie
-	char* cookie = Cookie_get(req->cookies, "sid");
-	if(!cookie)	 // Cookie not found
-		goto ret;
 
-	SSPair* entry = container_of_p(cookie, SSPair, value);
-	free(entry->value);
-	entry->value = "";
-	Cookie_av* c_av = cookie_av_new();
-	cookie_av_set_expires(c_av, -1);
-	concatenate_cookie_av(entry, c_av);
-	responseAddCookie(response, entry);
-	cookie_av_delete(c_av);
-ret:
+	Cookies* cookie = Cookies_init("sid", "");
+	Cookies_set_expire(cookie, "sid", -1);
+
+	responseAddCookie(response, cookie);  // Copy
+	Cookies_delete(cookie);				  // delete
+
 	return response;
 }
 
@@ -726,7 +711,7 @@ static Response* signup(Request* req) {
 				accountDel(account);
 
 				responseSetStatus(response, FOUND);
-				responseAddHeader(response, &((SSPair){ .key = "Location", .value = "/login/" }));
+				responseAddHeader(response, eXpire_pair("Location", "/login/", SSPair));
 				goto ret;
 			}
 			else {

@@ -65,9 +65,8 @@ void responseSetBody_data_move(Response* restrict r, void* restrict ctx, size_t 
 
 int response_get_status(const Response* r);
 
-// Add a cookie once
-// Suppose the Cookie_av is already concateneted
-void responseAddCookie(Response* restrict r, const SSPair* restrict cookie_entry);
+// Only add the first cookie entry, and ignore any other cookies
+void responseAddCookie(Response* restrict r, const Cookies* restrict cookie_entry);
 void responseAddHeader(Response* restrict r, const SSPair* restrict p);
 void responseAddHeader_move(Response* restrict r, SSPair* restrict p);
 void responseDel(Response* r);

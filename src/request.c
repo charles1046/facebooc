@@ -150,7 +150,7 @@ void requestDel(Request* req) {
 	if(req->headers)
 		header_delete((Header*)req->headers);
 	if(req->cookies)
-		Cookie_delete((Cookies*)req->cookies);
+		Cookies_delete((Cookies*)req->cookies);
 
 	free(req);
 }

@@ -6,29 +6,24 @@
 
 Node* insert(const void* restrict value, size_t size, const Node* restrict next) {
 	Node* new_node = malloc(sizeof(Node));
-	*(void**)(&new_node->value) = malloc(size);	 // Bypass const
-
+	new_node->value = malloc(size);
+	memcpy(new_node->value, value, size);
 	new_node->next = (Node*)next;
-	*(size_t*)(&new_node->size) = size;	 // Bypass const
-
-	memcpy((void*)new_node->value, value, size);
-
 	return new_node;
 }
 
 Node* insert_move(void* restrict value, const Node* restrict next) {
 	Node* new_node = malloc(sizeof(Node));
-	*(void**)(&new_node->value) = value;
+	new_node->value = value;
 	new_node->next = (Node*)next;
 	value = NULL;
-
 	return new_node;
 }
 
-void clear(Node* node) {
+void clear(Node* node, List_op free_func) {
 	while(node != NULL) {
 		const Node* tmp = node->next;
-		free((void*)node->value);
+		free_func(node->value);
 		free(node);
 		node = (Node*)tmp;
 	}
