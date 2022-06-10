@@ -144,6 +144,8 @@ static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
 				handler_func = &server->default_callback;
 
 			Response* response = (*handler_func)(req);
+			if(unlikely(!response))	 // Return NULL, goto not found
+				response = server->default_callback(req);
 
 			pop_log(addr, METHODS[req->method], req->path, response_get_status(response));
 

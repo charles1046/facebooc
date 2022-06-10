@@ -94,7 +94,7 @@ void header_insert_move(Header* restrict h, SSPair* restrict p) {
 }
 
 void* header_get(const Header* restrict h, const char* restrict key) {
-	if(unlikely(!h || !key || *key))
+	if(unlikely(!h || !key || !*key))
 		return NULL;
 
 	Node* cur = h->head;
@@ -116,7 +116,9 @@ void header_delete(Header* h) {
 	if(unlikely(!h))
 		return;
 
-	listForEach(h->head, header_entry_dtor__);
+	clear(h->head, header_entry_dtor__);
+	free(h);
+	h = NULL;
 }
 
 // The ': \r\n' should be already malloced outside, + 4
@@ -140,14 +142,14 @@ char* header_to_string(const Header* h) {
 		const char* value = SSPair(entry)->value;
 		const size_t key_len = strlen(key);
 		const size_t value_len = strlen(value);
-		const size_t entry_len = key_len + value_len + 4;  // Add ': \r\n'
+		const size_t entry_len = key_len + value_len + 5;  // Add ': \r\n'
 		if(unlikely(entry_len + index > RESP_SIZE)) {
 			sbuf = realloc(sbuf, (RESP_SIZE <<= 1));
 			continue;
 		}
 
 		header_entry_to_string__(sbuf + index, entry_len, (const SSPair*)entry->value);
-		index += entry_len;
+		index += entry_len - 1;
 		entry = entry->next;
 	}
 	return sbuf;

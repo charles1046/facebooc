@@ -26,4 +26,6 @@ char* url_decoder(const char* str);
 SPair* make_pair(const struct string_view* const key, const struct string_view* const value);
 SPair* query_entry(const char* str);
 
+char* string_view_dup(const struct string_view* const sv);
+
 #endif

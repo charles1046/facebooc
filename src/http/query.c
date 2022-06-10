@@ -43,7 +43,7 @@ Query* query_parser(char* buffer) {
 }
 
 void* query_get(const Query* restrict q, const char* restrict key) {
-	if(unlikely(!q || !key || *key))
+	if(unlikely(!q || !key || !*key))
 		return NULL;
 
 	Node* cur = q->head;
@@ -66,5 +66,5 @@ void query_delete(Query* q) {
 	if(likely(!q))	// Query string is not often happened
 		return;
 
-	listForEach(q->head, query_entry_dtor__);
+	clear(q->head, query_entry_dtor__);
 }
