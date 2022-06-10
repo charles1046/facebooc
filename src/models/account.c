@@ -274,9 +274,9 @@ bool account_auth(sqlite3* DB, const char* username, const char* password) {
 	(void)sqlite3_step(statement);
 
 	const char* real_pwd = (const char*)sqlite3_column_text(statement, 0);
-	if(likely(real_pwd == NULL))
+	sqlite3_finalize(statement);
+	if(real_pwd == NULL)
 		return false;
 	bool res = !strcmp(real_pwd, password);
-	sqlite3_finalize(statement);
 	return res;
 }
