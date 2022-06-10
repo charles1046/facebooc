@@ -141,16 +141,16 @@ fail:
 void requestDel(Request* req) {
 	if(req->path != req->uri)
 		free((char*)req->uri);	// It has a query, uri is splitted from path
-	if(req->path)
-		free((char*)req->path);
-	if(req->queryString)
-		query_delete((Query*)req->queryString);
-	if(req->postBody)
-		body_delete((Body*)req->postBody);
-	if(req->headers)
-		header_delete((Header*)req->headers);
-	if(req->cookies)
-		Cookies_delete((Cookies*)req->cookies);
+
+	free((char*)req->path);
+
+	query_delete((Query*)req->queryString);
+
+	body_delete((Body*)req->postBody);
+
+	header_delete((Header*)req->headers);
+
+	Cookies_delete((Cookies*)req->cookies);
 
 	free(req);
 }
