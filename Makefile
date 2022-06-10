@@ -25,10 +25,12 @@ TEST_UNIT_OBJ = \
 TEST_UNIT = $(wildcard tests/http/*.o)
 
 c_codes := $(wildcard include/*.h \
+						include/http/*.h \
 						include/models/*.h \
 						include/handler/*.h \
 						include/handler/handlers/*.h \
 						src/*.c \
+						src/http/*.c \
 						src/models/*.c \
 						src/handler/*.c \
                         src/handler/handlers/*.c \

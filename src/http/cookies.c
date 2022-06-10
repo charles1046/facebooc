@@ -1,6 +1,6 @@
 #include "http/cookies.h"
-#include "hash_map.h"
 #include "http/helper.h"
+#include "list.h"
 #include "pair.h"
 #include "utility.h"
 #include <stdio.h>
@@ -8,66 +8,141 @@
 #include <string.h>
 #include <time.h>
 
-#define min(x, y) ((x < y) ? (x) : (y))
+static const char* c_av_fmt_str[] = {
+	"",	 // Should be ignored (key)
+	"",	 // Should be ignored (value)
+	"; Expires=%s",
+	"; Max-Age=%s",
+	"; Domain=%s",
+	"; Path=%s",
+	"; %s",
+	"; %s",
+};
 
 // rfc6265, Section 4.1.1
 // set-cookie-string  = cookie-pair *( ";" SP cookie-av )
 // 		   cookie-av  = expires-av / max-age-av / domain-av /
 //  					path-av / secure-av / httponly-av /
 //  					extension-av
-struct Cookie_av {
-	const char* expires;
-	const char* max_age;
-	const char* domain;
-	const char* path;
-	int secure;	   // True or False
-	int httponly;  // True or False
-};
-
-struct Cookie_av_to_string_template__ {
+typedef struct __attribute__((__packed__)) Cookie {
+	const char* key;
+	const char* value;
 	const char* expires;
 	const char* max_age;
 	const char* domain;
 	const char* path;
 	const char* secure;
 	const char* httponly;
-};
+
+} Cookie;
+
+typedef Cookie Cookie_to_string_template__;
 
 struct Cookies {
-	Hash_map* dict;
+	Node* dict;
 };
 
-Cookies* Cookie_new(void) {
+Cookies* Cookies_new(void) {
 	Cookies* c = malloc(sizeof(Cookies));
-	c->dict = Hash_map_new();
+	c->dict = NULL;
 	return c;
 }
 
-Cookies* Cookie_insert(Cookies* c, const SPair* p) {
-	if(unlikely(!c || !p))
+static inline void single_cookie_init__(Cookie* c) {
+	c->key = NULL;
+	c->value = NULL;
+	c->expires = NULL;
+	c->max_age = NULL;
+	c->domain = NULL;
+	c->path = NULL;
+	c->secure = NULL;
+	c->httponly = NULL;
+}
+
+static inline Cookie* single_cookie_new__(void) {
+	Cookie* c = malloc(sizeof(Cookie));
+	single_cookie_init__(c);
+	return c;
+}
+
+static inline void single_cookie_delete__(Cookie* c) {
+	free((char*)c->key);
+	free((char*)c->value);
+	free((char*)c->expires);
+	free((char*)c->max_age);
+	free((char*)c->domain);
+	free((char*)c->path);
+	free((char*)c->secure);
+	free((char*)c->httponly);
+	free(c);
+	c = NULL;
+}
+
+static _Bool cookie_entry_dtor__(void* e) {
+	single_cookie_delete__((Cookie*)e);
+	return true;
+}
+
+static Cookie* single_cookie_gen__(const char* str) {
+	const char* seperator = find_first_of(str, "=");
+	struct string_view key = { .begin = str, .end = seperator, .size = seperator - str };
+	struct string_view value = { .begin = seperator + 1,
+								 .end = str + strlen(str) + 1,
+								 .size = strlen(str) - key.size - 1 };
+	Cookie* c = single_cookie_new__();
+	single_cookie_init__(c);
+	c->key = string_view_dup(&key);
+	c->value = string_view_dup(&value);
+
+	return c;
+}
+
+static inline size_t cookie_template_len__(const Cookie_to_string_template__* t) {
+	return strlen(t->key) + strlen(t->value) + strlen(t->expires) + strlen(t->max_age)
+		   + strlen(t->domain) + strlen(t->path) + strlen(t->secure) + strlen(t->httponly);
+}
+
+Cookies* Cookies_insert(Cookies* c, const char* key, const char* value) {
+	if(unlikely(!c || !key || !*key || !value))	 // value could be "" empty string
 		return c;
 
-	(void)Hash_map_insert(c->dict, p);
+	Cookie* new_c = single_cookie_new__();
+	new_c->key = strdup(key);
+	new_c->value = strdup(value);
+
+	c->dict = insert_move(new_c, c->dict);
 	return c;
 }
 
-Cookies* Cookie_insert_move(Cookies* c, SPair* p) {
-	if(unlikely(!c || !p))
-		return c;
-
-	(void)Hash_map_insert_move(c->dict, p);
-	return c;
+Cookies* Cookies_init(const char* key, const char* value) {
+	return Cookies_insert(Cookies_new(), key, value);
 }
 
-char* Cookie_get(const Cookies* c, const char* key) {
+#define Node_to_Cookie(entry) ((Cookie*)((entry)->value))
+
+Cookie* Cookies_get(const Cookies* c, const char* key) {
 	if(unlikely(!c || !key))
 		return NULL;
 
-	return Hash_map_get(c->dict, key);
+	Node* entry = c->dict;
+	while(entry) {
+		const char* entry_key = Node_to_Cookie(entry)->key;
+		if(strcmp(key, entry_key)) {  // Key is not matched
+			entry = entry->next;
+			continue;
+		}
+
+		// Is found the key
+		return Node_to_Cookie(entry);
+	}
+	return NULL;
 }
 
-void Cookie_delete(Cookies* c) {
-	Hash_map_delete(c->dict);
+void Cookies_delete(Cookies* c) {
+	if(unlikely(!c))
+		return;
+
+	clear(c->dict, cookie_entry_dtor__);
 	free(c);
 	c = NULL;
 }
@@ -82,7 +157,7 @@ Cookies* cookies_parser(const Header* header) {
 	// The str is begin with non-whitespace
 	// cookie-header    = "Cookie:" OWS cookie-string OWS
 	// cookie-string    = cookie-pair *(";" SP cookie-pair)
-	Cookies* cookies = Cookie_new();
+	Cookies* cookies = Cookies_new();
 	while(*str) {
 		struct string_view sep = string_view_ctor(str, "; ");
 		if(sep.size != -1) {
@@ -92,8 +167,9 @@ Cookies* cookies_parser(const Header* header) {
 		// Check if it have '='
 		if(strchr(str, '=')) {	// transfer url encoding
 			char* decoded = url_decoder(str);
-			SPair* entry = query_entry(decoded);
-			Hash_map_insert_move(cookies->dict, entry);
+
+			Cookie* c = single_cookie_gen__(decoded);
+			cookies->dict = insert_move(c, cookies->dict);
 			free(decoded);
 		}
 		str += strlen(str) + 1;
@@ -102,130 +178,81 @@ Cookies* cookies_parser(const Header* header) {
 	return cookies;
 }
 
-Cookie_av* cookie_av_new() {
-	Cookie_av* c_av = malloc(sizeof(Cookie_av));
-	c_av->expires = NULL;
-	c_av->domain = NULL;
-	c_av->path = NULL;
-	c_av->max_age = NULL;
-	c_av->secure = 0;
-	c_av->httponly = 0;
-	return c_av;
+void Cookies_set_attr(Cookies* c, const char* key, Cookie_attr attr, const char* attr_value) {
+	if(unlikely(!c || !key || !*key || !attr_value || (uint32_t)attr > HTTPONLY))
+		return;
+
+	Cookie* cookie = Cookies_get(c, key);
+	char** entry = ((char**)cookie) + attr;	 // Use offset to setup the char*
+	free(*entry);
+
+	// Becareful, @len will calculate the format string's place holder
+	size_t len = strlen(c_av_fmt_str[attr]) + strlen(attr_value);
+	char* new_attr_entry = malloc(len);
+	snprintf(new_attr_entry, len, c_av_fmt_str[attr], attr_value);
+
+	*entry = new_attr_entry;
 }
 
-// The c_av must not be a nullptr
-static bool c_av_is_empty(const Cookie_av* c_av) {
-
-	return !c_av->expires && !c_av->domain && !c_av->path && !c_av->max_age && !c_av->httponly
-		   && !c_av->secure;
-}
-
-static inline size_t cav_template_len(const struct Cookie_av_to_string_template__* t) {
-	return strlen(t->expires) + strlen(t->max_age) + strlen(t->domain) + strlen(t->path)
-		   + strlen(t->secure) + strlen(t->httponly);
-}
-
-const char* concatenate_cookie_av(SSPair* restrict cookie, const Cookie_av* restrict c_av) {
-	if(unlikely(!cookie || !cookie->key || !cookie->value || !c_av || c_av_is_empty(c_av)))
+char* Cookie_to_string(const Cookies* c) {
+	if(unlikely(!c || !c->dict))
 		return NULL;
 
-	//  set-cookie-string = cookie-pair *( ";" SP cookie-av )
-	size_t total_len = strlen(cookie->key) + strlen(cookie->value) + 1;	 // Add the '='
-	const struct Cookie_av_to_string_template__ t = {
-		.expires = c_av->expires ? c_av->expires : "",
-		.max_age = c_av->max_age ? c_av->max_age : "",
-		.domain = c_av->domain ? c_av->domain : "",
-		.path = c_av->path ? c_av->path : "/",	// Defalut path is root
-		.secure = c_av->secure ? "; Secure" : "",
-		.httponly = c_av->httponly ? "; HttpOnly" : "",
+	// Suppose there is only one cookie,
+	const Cookie* cur_c = Node_to_Cookie(c->dict);	// Aliasing
+	const Cookie_to_string_template__ t = {
+		.key = cur_c->key,
+		.value = cur_c->value,
+		.expires = cur_c->expires ? cur_c->expires : "",
+		.max_age = cur_c->max_age ? cur_c->max_age : "",
+		.domain = cur_c->domain ? cur_c->domain : "",
+		.path = cur_c->path ? cur_c->path : "; Path=/",	 // Defalut path is root
+		.secure = cur_c->secure ? "; Secure" : "",
+		.httponly = cur_c->httponly ? "; HttpOnly" : "",
 	};
-	total_len += cav_template_len(&t);
 
-	char* new_val = malloc(total_len);
-	snprintf(new_val, total_len, "%s=%s%s%s%s%s%s%s", cookie->key, cookie->value, t.expires,
-			 t.max_age, t.domain, t.path, t.secure, t.httponly);
+	size_t cur_len = cookie_template_len__(&t);
 
-	// Replace old value which is mappped
-	free(cookie->value);
-	cookie->value = new_val;
-	return new_val;
+	char* str = malloc(cur_len + 2);  // Add '=' and '\0'
+
+	snprintf(str, cur_len + 2, "%s=%s%s%s%s%s%s%s", t.key, t.value, t.expires, t.max_age, t.domain,
+			 t.path, t.secure, t.httponly);
+
+	return str;
 }
 
 // RFC 1123
-//  expires-av        = "Expires=" sane-cookie-date
 //  sane-cookie-date  = <rfc1123-date, defined in [RFC2616], Section 3.3.1>
-void cookie_av_set_expires(Cookie_av* c_av, int duration) {
-	if(unlikely(!c_av))
-		return;
-
-	free((char*)c_av->expires);
-
+void Cookie_gen_expire(char buf[64], int duration) {
 	const time_t t = time(NULL) + duration;
-	char sbuff[100];
-	strftime(sbuff, 100, "; Expires=%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
-
-	c_av->expires = strdup(sbuff);
+	strftime(buf, 64, "%a, %d %b %Y %H:%M:%S GMT", gmtime(&t));
 }
 
-void cookie_av_set_maxage(Cookie_av* c_av, int age) {
-	if(unlikely(!c_av))
-		return;
-
-	free((char*)c_av->max_age);
-
-	char* str = strdup("; Max-Age=0");
-	str[10] += age;
-	c_av->max_age = str;
+void Cookies_set_expire(Cookies* c, const char* key, int dutation) {
+	char sbuf[64];
+	Cookie_gen_expire(sbuf, dutation);
+	Cookies_set_attr(c, key, EXPIRE, sbuf);
 }
 
-void cookie_av_set_domain(Cookie_av* restrict c_av, const char* restrict domain) {
-	if(unlikely(!c_av || !domain))
+void Cookies_print(const Cookies* c) {
+	if(!c || !c->dict)
 		return;
 
-	free((char*)c_av->domain);
-
-	size_t len = strlen(domain);
-	char* domain_str = malloc(len + 12);
-	snprintf(domain_str, 12 + len, "; Domain=%s", domain);
-	c_av->domain = domain_str;
-}
-
-void cookie_av_set_path(Cookie_av* restrict c_av, const char* restrict path) {
-	if(unlikely(!c_av || !path))
-		return;
-
-	free((char*)c_av->path);
-
-	size_t len = strlen(path);
-	char* path_str = malloc(len + 7);
-	snprintf(path_str, 7 + len, "; Path=%s", path);
-	c_av->path = path_str;
-}
-
-void cookie_av_set_secure(Cookie_av* c_av, int is_secure) {
-	if(unlikely(!c_av))
-		return;
-
-	c_av->secure = is_secure;
-}
-
-void cookie_av_set_httponly(Cookie_av* c_av, int is_httponly) {
-	if(unlikely(!c_av))
-		return;
-
-	c_av->secure = is_httponly;
-}
-
-void cookie_av_delete(Cookie_av* c_av) {
-	if(!c_av)
-		return;
-
-	free((char*)c_av->expires);
-	free((char*)c_av->path);
-	free((char*)c_av->domain);
-	free((char*)c_av->max_age);
-	c_av->expires = NULL;
-	c_av->domain = NULL;
-	c_av->path = NULL;
-	c_av->max_age = NULL;
+	Node* entry = c->dict;
+	while(entry) {
+		Cookie* cur_c = Node_to_Cookie(entry);
+		const Cookie_to_string_template__ t = {
+			.key = cur_c->key,
+			.value = cur_c->value,
+			.expires = cur_c->expires ? cur_c->expires : "",
+			.max_age = cur_c->max_age ? cur_c->max_age : "",
+			.domain = cur_c->domain ? cur_c->domain : "",
+			.path = cur_c->path ? cur_c->path : "; Path=/",	 // Defalut path is root
+			.secure = cur_c->secure ? "; Secure" : "",
+			.httponly = cur_c->httponly ? "; HttpOnly" : "",
+		};
+		fprintf(stderr, "%s=%s%s%s%s%s%s%s\n", t.key, t.value, t.expires, t.max_age, t.domain,
+				t.path, t.secure, t.httponly);
+		entry = entry->next;
+	}
 }

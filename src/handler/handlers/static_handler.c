@@ -115,8 +115,8 @@ Response* static_handler(Request* req) {
 
 	// RESPOND
 	responseSetStatus(response, OK);
-	responseAddHeader(response, &(SSPair){ .key = "Content-Type", .value = (char*)mimeType });
-	responseAddHeader(response, &(SSPair){ .key = "Content-Length", .value = content_len });
-	responseAddHeader(response, &(SSPair){ .key = "Cache-Control", .value = "max-age=2592000" });
+	responseAddHeader(response, eXpire_pair("Content-Type", (char*)mimeType, SSPair));
+	responseAddHeader(response, eXpire_pair("Content-Length", content_len, SSPair));
+	responseAddHeader(response, eXpire_pair("Cache-Control", "max-age=2592000", SSPair));
 	return response;
 }

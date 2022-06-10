@@ -5,40 +5,55 @@
 #include "pair.h"
 #include <stdbool.h>
 
+typedef enum Cookie_attr {
+	KEY,	// reserved, don't use
+	VALUE,	// reserved, don't use
+	EXPIRE,
+	MAX_AGE,
+	DOMAIN,
+	PATH,
+	SECURE,
+	HTTPONLY,
+} Cookie_attr;
+
 // All cookie's element is
 // (const char *)(key):(char *)(value)
 // A.K.A const string maps to string
 typedef struct Cookies Cookies;
-typedef struct Cookie_av Cookie_av;
+typedef struct Cookie Cookie;
 
 // Refers to RFC 6265
-// Return a new instance of Cookies structure, you should free it via Cookie_delete
+// Return a new instance of Cookie structure, you should free it via Cookie_delete
 Cookies* cookies_parser(const Header* header);
 
-Cookies* Cookie_new(void);
+Cookies* Cookies_new();
 // Add a string-void pair to the cookie
 // Return the Cookies c
 // Will "copy" the p into the Cookies c
-Cookies* Cookie_insert(Cookies* c, const SPair* p);
-// Move semantics imple.
-Cookies* Cookie_insert_move(Cookies* c, SPair* p);
-// Use key to search the value in cookie
+Cookies* Cookies_insert(Cookies* c, const char* key, const char* value);
+
+// Equivalent to Cookies_new + Cookies_insert
+Cookies* Cookies_init(const char* key, const char* value);
+
+// Use key to search the cookie
 // Return NULL if not found
-char* Cookie_get(const Cookies* c, const char* key);
-void Cookie_delete(Cookies*);
+Cookie* Cookies_get(const Cookies* c, const char* key);
+void Cookies_delete(Cookies*);
 
-// For response setting attributes
-// Return concatenated value, the origin value will be also replaced
-const char* concatenate_cookie_av(SSPair* restrict cookie, const Cookie_av* restrict c_av);
+// Overwrite default attribution
+void Cookies_set_attr(Cookies* c, const char* key, Cookie_attr attr, const char* attr_value);
 
-Cookie_av* cookie_av_new();
-void cookie_av_set_expires(Cookie_av* restrict c_av, int duration);
-// age must be [1, 9]
-void cookie_av_set_maxage(Cookie_av* c_av, int age);
-void cookie_av_set_domain(Cookie_av* restrict c_av, const char* restrict domain);
-void cookie_av_set_path(Cookie_av* restrict c_av, const char* restrict path);
-void cookie_av_set_secure(Cookie_av* c_av, int is_secure);
-void cookie_av_set_httponly(Cookie_av* c_av, int is_httponly);
-void cookie_av_delete(Cookie_av*);
+char* Cookie_to_string(const Cookies* c);
+
+void Cookie_gen_expire(char dst[64], int duration);
+
+// Equivalent to Cookie_gen_expire + Cookies_set_attr(expire)
+void Cookies_set_expire(Cookies* c, const char* key, int dutation);
+
+#define Cookie_get_attr(cookie_p, attr) (((char**)cookie_p)[attr])
+
+#ifdef DEBUG
+void Cookies_print(const Cookies* c);
+#endif
 
 #endif

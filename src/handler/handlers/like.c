@@ -11,7 +11,7 @@
 
 Response* like(Request* req) {
 	const Account* my_acc = get_account(req->cookies);
-	char redir_to[32] = { "/dashboard/" };
+	char redirect_path[32] = { "/dashboard/" };
 	if(unlikely(my_acc == NULL))
 		goto fail;
 
@@ -22,9 +22,9 @@ Response* like(Request* req) {
 	likeDel(likeCreate(get_db(), my_acc->id, post->authorId, post->id));
 
 	if(query_get(req->queryString, "r"))
-		snprintf(redir_to, 32, "/profile/%d/", post->authorId);
+		snprintf(redirect_path, 32, "/profile/%d/", post->authorId);
 
 fail:
 	accountDel((Account*)my_acc);
-	return responseNewRedirect(redir_to);
+	return responseNewRedirect(redirect_path);
 }

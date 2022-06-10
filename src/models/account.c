@@ -2,6 +2,7 @@
 #include <time.h>
 
 #include "bs.h"
+#include "db.h"
 #include "models/account.h"
 #include "models/session.h"
 #include "utility.h"
@@ -18,6 +19,15 @@ Account* accountNew(int id, int createdAt, const char* name, const char* email,
 	account->username = bsNew(username);
 
 	return account;
+}
+
+// Get sid string from cookies
+const Account* get_account(const Cookies* c) {
+	// TODO: Use an object pool to reduce malloc times
+	if(unlikely(c == NULL))
+		return NULL;
+	Cookie* cookie = Cookies_get(c, "sid");
+	return accountGetBySId(get_db(), Cookie_get_attr(cookie, VALUE));
 }
 
 Account* accountGetById(sqlite3* DB, int id) {
@@ -264,6 +274,8 @@ bool account_auth(sqlite3* DB, const char* username, const char* password) {
 	(void)sqlite3_step(statement);
 
 	const char* real_pwd = (const char*)sqlite3_column_text(statement, 0);
+	if(likely(real_pwd == NULL))
+		return false;
 	bool res = !strcmp(real_pwd, password);
 	sqlite3_finalize(statement);
 	return res;

@@ -6,25 +6,18 @@
 
 Response* logout(Request* req) {
 	const Account* my_acc = get_account(req->cookies);
-	if(unlikely(my_acc == NULL)) {	// It's usually logged in
-		accountDel((Account*)my_acc);
+	if(unlikely(!my_acc))  // It's usually logged in
 		return responseNewRedirect("/");
-	}
+
+	accountDel((Account*)my_acc);
 
 	Response* response = responseNewRedirect("/");
-	// Reset cookie
-	char* cookie = Cookie_get(req->cookies, "sid");
-	if(!cookie)	 // Cookie not found
-		goto ret;
 
-	SSPair* entry = container_of_p(cookie, SSPair, value);
-	free(entry->value);
-	entry->value = "";
-	Cookie_av* c_av = cookie_av_new();
-	cookie_av_set_expires(c_av, -1);
-	concatenate_cookie_av(entry, c_av);
-	responseAddCookie(response, entry);
-	cookie_av_delete(c_av);
-ret:
+	Cookies* cookie = Cookies_init("sid", "");
+	Cookies_set_expire(cookie, "sid", -1);
+
+	responseAddCookie(response, cookie);  // Copy
+	Cookies_delete(cookie);				  // delete
+
 	return response;
 }

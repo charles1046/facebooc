@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "http/cookies.h"
 #include "list.h"
 
 typedef struct Account {
@@ -23,6 +24,8 @@ Account* accountNew(int id, int create_at, const char* name, const char* email,
 // Create a new account into db
 Account* accountCreate(sqlite3* db, const char* name, const char* email, const char* username,
 					   const char* password);
+// Get sid string from cookies
+const Account* get_account(const Cookies* c);
 // Get account by uid, return NULL if not found
 Account* accountGetById(sqlite3* db, int uid);
 // Get account by email, return NULL if not found

@@ -40,15 +40,15 @@ Header* header_parser(char* restrict buf, size_t* restrict offset) {
 		if(line.size == 0)	// empty line, that is the end of header
 			break;
 
-		const char* separator = find_first_of(line.begin, ":");
-		assert(separator);
+		const char* seperator = find_first_of(line.begin, ":");
+		assert(seperator);
 
 		struct string_view key = { .begin = line.begin,
-								   .end = separator,
-								   .size = separator - line.begin };
-		struct string_view value = { .begin = separator + 1,
+								   .end = seperator,
+								   .size = seperator - line.begin };
+		struct string_view value = { .begin = seperator + 1,
 									 .end = line.end,
-									 .size = line.end - (separator + 1) };
+									 .size = line.end - (seperator + 1) };
 		CONST_INIT(*key.end, (char)0);	  // Force set ':' to '\0'
 		CONST_INIT(*value.end, (char)0);  // Force set '\r' to '\0'
 
@@ -94,22 +94,17 @@ void header_insert_move(Header* restrict h, SSPair* restrict p) {
 }
 
 void* header_get(const Header* restrict h, const char* restrict key) {
-	if(unlikely(h == NULL))
-		return NULL;  // no header
-
-	if(unlikely(key == NULL))
-		return NULL;  // no key
-
-	if(unlikely(*key == '\0'))
-		return NULL;  // empty key
+	if(unlikely(!h || !key || !*key))
+		return NULL;
 
 	Node* cur = h->head;
-	while(cur) {
-		if(strcmp(SSPair(cur)->key, key) == 0)
-			return SSPair(cur)->value;
+	while(cur && strcmp(SSPair(cur)->key, key))
 		cur = cur->next;
-	}
-	return NULL;
+
+	if(cur)	 // Found
+		return SSPair(cur)->value;
+	else
+		return NULL;
 }
 
 static bool header_entry_dtor__(void* p_) {
@@ -121,7 +116,9 @@ void header_delete(Header* h) {
 	if(unlikely(!h))
 		return;
 
-	listForEach(h->head, header_entry_dtor__);
+	clear(h->head, header_entry_dtor__);
+	free(h);
+	h = NULL;
 }
 
 // The ': \r\n' should be already malloced outside, + 4
@@ -145,14 +142,14 @@ char* header_to_string(const Header* h) {
 		const char* value = SSPair(entry)->value;
 		const size_t key_len = strlen(key);
 		const size_t value_len = strlen(value);
-		const size_t entry_len = key_len + value_len + 4;  // Add ': \r\n'
+		const size_t entry_len = key_len + value_len + 5;  // Add ': \r\n'
 		if(unlikely(entry_len + index > RESP_SIZE)) {
 			sbuf = realloc(sbuf, (RESP_SIZE <<= 1));
 			continue;
 		}
 
 		header_entry_to_string__(sbuf + index, entry_len, (const SSPair*)entry->value);
-		index += entry_len;
+		index += entry_len - 1;
 		entry = entry->next;
 	}
 	return sbuf;

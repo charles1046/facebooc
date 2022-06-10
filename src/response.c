@@ -50,11 +50,6 @@ struct Response {
 	const char* body;
 };
 
-// The '=' should be already malloced outside, + 1
-static inline void cookie_to_string__(char* restrict dst, size_t len, const SSPair* restrict c) {
-	snprintf(dst, len, "%s=%s", c->key, c->value);
-}
-
 Response* responseNew() {
 	Response* response = malloc(sizeof(Response));
 	response->status = OK;
@@ -108,20 +103,16 @@ void responseSetBody_data_move(Response* restrict r, void* restrict ctx, size_t 
 }
 
 int response_get_status(const Response* r) {
+	if(unlikely(!r))
+		return BAD_REQUEST;
+
 	return r->status;
 }
 
-void responseAddCookie(Response* restrict r, const SSPair* restrict c) {
-	// Suppose the Cookie_av is already concateneted
-
-	// Cookie to string
-	size_t len = strlen(c->key) + 1 + strlen(c->value);
-	char* str = malloc(len + 1);  // Add the '\0'
-	cookie_to_string__(str, len, c);
-
+void responseAddCookie(Response* restrict r, const Cookies* restrict c) {
 	SSPair* p_ = malloc(sizeof(SSPair));
 	p_->key = strdup("Set-Cookie");
-	p_->value = str;
+	p_->value = Cookie_to_string(c);
 
 	responseAddHeader_move(r, p_);
 }
@@ -132,6 +123,7 @@ void responseAddHeader(Response* restrict r, const SSPair* restrict p) {
 
 void responseAddHeader_move(Response* restrict r, SSPair* restrict p) {
 	header_insert_move(r->header, p);
+	p = NULL;
 }
 
 void responseDel(Response* response) {

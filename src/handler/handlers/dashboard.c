@@ -29,7 +29,7 @@ Response* dashboard(Request* req) {
 		Account* account = accountGetById(get_db(), post->authorId);
 		bool liked = likeLiked(get_db(), my_acc->id, post->id);
 		const size_t acc_len = strlen(account->name);
-		const size_t post_len = strlen(post->body);
+		const size_t post_len = bsGetLen(post->body);
 
 		char* bbuff = bsNewLen("", strlen(post->body) + 256);
 		snprintf(bbuff, 86 + acc_len + post_len,

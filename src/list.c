@@ -6,29 +6,24 @@
 
 Node* insert(const void* restrict value, size_t size, const Node* restrict next) {
 	Node* new_node = malloc(sizeof(Node));
-	*(void**)(&new_node->value) = malloc(size);	 // Bypass const
-
+	new_node->value = malloc(size);
+	memcpy(new_node->value, value, size);
 	new_node->next = (Node*)next;
-	*(size_t*)(&new_node->size) = size;	 // Bypass const
-
-	memcpy((void*)new_node->value, value, size);
-
 	return new_node;
 }
 
 Node* insert_move(void* restrict value, const Node* restrict next) {
 	Node* new_node = malloc(sizeof(Node));
-	*(void**)(&new_node->value) = value;
+	new_node->value = value;
 	new_node->next = (Node*)next;
 	value = NULL;
-
 	return new_node;
 }
 
-void clear(Node* node) {
+void clear(Node* node, List_op free_func) {
 	while(node != NULL) {
 		const Node* tmp = node->next;
-		free((void*)node->value);
+		free_func(node->value);
 		free(node);
 		node = (Node*)tmp;
 	}
@@ -36,10 +31,11 @@ void clear(Node* node) {
 
 _Bool listForEach(Node* node, List_op func) {
 	_Bool result = true;
-	Node** indirect = &node;
-	while((*indirect) != NULL && result) {
-		result = func((void*)(*indirect)->value);  // Do it
-		indirect = (Node**)&((*indirect)->next);   // To next
+	Node** indrect = &node;
+
+	while(*indrect != NULL && result) {
+		result = func((void*)(*indrect)->value);  // Do it
+		indrect = (Node**)&((*indrect)->next);	  // To next
 	}
 
 	return result;

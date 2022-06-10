@@ -11,17 +11,15 @@
 Response* signup(Request* req) {
 	const Account* my_acc = get_account(req->cookies);
 	if(unlikely(my_acc != NULL)) {
-		// If you're already logged in, you should not register
+		// If you already logged in, you should not register
 		accountDel((Account*)my_acc);
 		return responseNewRedirect("/dashboard/");
 	}
-
 	Response* response = responseNew();
 	Template* template = templateNew("templates/signup.html");
 	templateSet(template, "active", "signup");
 	templateSet(template, "subtitle", "Sign Up");
 	responseSetStatus(response, OK);
-
 	if(req->method == POST) {
 		bool valid = true;
 		const char* name = body_get(req->postBody, "name");
@@ -29,7 +27,6 @@ Response* signup(Request* req) {
 		const char* username = body_get(req->postBody, "username");
 		const char* password = body_get(req->postBody, "password");
 		const char* confirmPassword = body_get(req->postBody, "confirm-password");
-
 		if(!name) {
 			template_set_error_message(template, "nameError", "You must enter your name!");
 		}
@@ -40,7 +37,6 @@ Response* signup(Request* req) {
 		else {
 			templateSet(template, "formName", name);
 		}
-
 		if(!email) {
 			template_set_error_message(template, "emailError", "You must enter an email!");
 		}
@@ -57,7 +53,6 @@ Response* signup(Request* req) {
 		else {
 			templateSet(template, "formEmail", email);
 		}
-
 		if(!username) {
 			template_set_error_message(template, "usernameError", "You must enter a username!");
 		}
@@ -71,7 +66,6 @@ Response* signup(Request* req) {
 		else {
 			templateSet(template, "formUsername", username);
 		}
-
 		if(!password) {
 			template_set_error_message(template, "passwordError", "You must enter a password!");
 		}
@@ -79,7 +73,6 @@ Response* signup(Request* req) {
 			template_set_error_message(template, "passwordError",
 									   "Your password must be at least 8 characters long!");
 		}
-
 		if(!confirmPassword) {
 			template_set_error_message(template, "confirmPasswordError",
 									   "You must confirm your password.");
@@ -88,15 +81,13 @@ Response* signup(Request* req) {
 			template_set_error_message(template, "confirmPasswordError",
 									   "The two passwords must be the same.");
 		}
-
 		if(valid) {
 			Account* account = accountCreate(get_db(), name, email, username, password);
-
 			if(account) {
 				accountDel(account);
 
 				responseSetStatus(response, FOUND);
-				responseAddHeader(response, &((SSPair){ .key = "Location", .value = "/login/" }));
+				responseAddHeader(response, eXpire_pair("Location", "/login/", SSPair));
 				goto ret;
 			}
 			else {
@@ -105,7 +96,6 @@ Response* signup(Request* req) {
 			}
 		}
 	}
-
 	responseSetBody(response, templateRender(template));
 ret:
 	templateDel(template);
