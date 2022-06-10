@@ -32,7 +32,7 @@ Query* query_parser(char* buffer) {
 		if(strchr(buffer, '=')) {  // transfter url encoding
 			char* decoded = url_decoder(buffer);
 			SPair* entry = query_entry(decoded);
-			q->head = insert(entry, sizeof(SPair), q->head);
+			q->head = insert_move(entry, q->head);
 			free(decoded);
 		}
 
@@ -57,8 +57,7 @@ void* query_get(const Query* restrict q, const char* restrict key) {
 }
 
 static bool query_entry_dtor__(void* p_) {
-	SPair* p = (SPair*)p_;
-	SPair_delete(p);
+	SPair_delete((SPair*)p_);
 	return true;
 }
 
@@ -67,4 +66,5 @@ void query_delete(Query* q) {
 		return;
 
 	clear(q->head, query_entry_dtor__);
+	free(q);
 }

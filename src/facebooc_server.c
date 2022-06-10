@@ -238,7 +238,7 @@ static Response* dashboard(Request* req) {
 		Account* account = accountGetById(get_db(), post->authorId);
 		bool liked = likeLiked(get_db(), my_acc->id, post->id);
 		const size_t acc_len = strlen(account->name);
-		const size_t post_len = strlen(post->body);
+		const size_t post_len = bsGetLen(post->body);
 
 		char* bbuff = bsNewLen("", strlen(post->body) + 256);
 		snprintf(bbuff, 86 + acc_len + post_len,
@@ -613,10 +613,10 @@ ret:
 
 static Response* logout(Request* req) {
 	const Account* my_acc = get_account(req->cookies);
-	if(unlikely(my_acc == NULL)) {	// It's usually logined
-		accountDel((Account*)my_acc);
+	if(unlikely(!my_acc))  // It's usually logined
 		return responseNewRedirect("/");
-	}
+
+	accountDel((Account*)my_acc);
 
 	Response* response = responseNewRedirect("/");
 

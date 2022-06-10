@@ -110,7 +110,7 @@ Cookies* Cookies_insert(Cookies* c, const char* key, const char* value) {
 	new_c->key = strdup(key);
 	new_c->value = strdup(value);
 
-	c->dict = insert(new_c, sizeof(Cookie), c->dict);
+	c->dict = insert_move(new_c, c->dict);
 	return c;
 }
 
