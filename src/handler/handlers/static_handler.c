@@ -8,7 +8,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include "hash_map.h"
@@ -18,6 +17,8 @@
 // Don't use free to munmap it
 // Also, not expected to munmap it
 static Hash_map* static_file_table = NULL;
+
+#define min(x, y) ((x) < (y) ? (x) : (y))
 
 typedef struct buf_size {
 	void* address;
