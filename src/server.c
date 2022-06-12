@@ -127,7 +127,7 @@ static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
 			fprintf(stderr, "error: read failed\n");
 		}
 	}
-	if(n_read > 0) {
+	else if(n_read > 0) {
 		buff[n_read] = '\0';
 
 		Request* req = requestNew(buff);
