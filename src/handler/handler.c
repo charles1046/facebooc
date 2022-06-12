@@ -32,7 +32,7 @@ static inline void add_handler(Hash_map* handlers, char* handling_name, Handler 
 	Hash_map_insert_move(handlers, new_handler);
 }
 
-static inline char* get_handling_type(Request* request) {
+static inline char* get_routing_path(Request* request) {
 	char dir[32] = { 0 };  // Suppose single dir is less than 32 char
 	fetch_dir(dir, request->uri + 1);
 	return strdup(dir);
@@ -61,9 +61,9 @@ void server_add_handlers(Server* server) {
 }
 
 Response* handle_request(Hash_map* handlers, Request* request) {
-	char* handling_type = get_handling_type(request);
+	char* routing_path = get_routing_path(request);
 
-	Handler* handler = Hash_map_get(handlers, handling_type);
+	Handler* handler = Hash_map_get(handlers, routing_path);
 	if(handler == NULL)	 // not found
 		handler = Hash_map_get(handlers, "not_found");
 
