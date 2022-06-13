@@ -13,14 +13,14 @@ COPY ["templates", "/app/templates/"]
 COPY ["static/scss/", "/app/static/scss"]
 RUN make release
 
-FROM debian:latest
+FROM alpine:latest
 LABEL Author="zxc25077667@protonmail.com"
 ENV port 8080
 ENV DB_PATH "/app/data/db.sqlite3"
 WORKDIR /app
 
-RUN apt-get update -y && apt-get install -y libsqlite3-dev && \
-    mkdir /data && touch ${DB_PATH} && chmod 600 ${DB_PATH} && chown -R 1000:1000 /data
+RUN apk add sqlite-dev libc6-compat --no-cache && \
+    mkdir -p /app/data && touch ${DB_PATH} && chmod 600 ${DB_PATH} && chown -R 1000:1000 /app/data
 COPY ["static", "/app/static/"]
 COPY ["templates", "/app/templates/"]
 
