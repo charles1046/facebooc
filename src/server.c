@@ -18,8 +18,6 @@ typedef int sockopt_t;
 #include "server.h"
 #include "utility.h"
 
-#include "handler/handler.h"
-
 static char* METHODS[8] = { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT" };
 
 static const int EPOLL_NUM = 64;
@@ -137,7 +135,15 @@ static inline void handle(Server* server, int fd, struct sockaddr_in* addr) {
 			pop_log(addr, "", "", 400);
 		}
 		else {
-			Response* response = handle_request(server->handlers, req);
+			// Route one dir in once
+			char dir[32] = { 0 };  // Suppose single dir is less than 32 char
+			fetch_dir(dir, req->uri + 1);
+
+			Handler* handler_func = Hash_map_get(server->handlers, dir);
+			if(!handler_func)  // not found
+				handler_func = &server->default_callback;
+
+			Response* response = (*handler_func)(req);
 
 			pop_log(addr, METHODS[req->method], req->path, response_get_status(response));
 
