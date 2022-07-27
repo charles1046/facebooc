@@ -85,12 +85,10 @@ void FB_delete(Facebooc* s) {
 	s = NULL;
 }
 
-#define invalid(k, v)                \
-	{                                \
-		templateSet(template, k, v); \
-		valid = false;               \
-	}
-#define min(x, y) ((x) < (y) ? (x) : (y))
+static inline int invalid(Template* template, const char* key, const char* value) {
+	templateSet(template, key, value);
+	return false;
+}
 
 // compare str1 and str2 from tail
 static inline int rev_cmp(const char* str1, size_t len1, const char* str2, size_t len2) {
@@ -102,7 +100,7 @@ static inline const char* mimeType_mux(const char* path) {
 	static const char* file_type[] = {
 		"html", "json", "jpeg", "jpg", "gif", "png", "css", "js",
 	};
-	static const size_t file_type_len = sizeof(file_type) / sizeof(*file_type);
+	static const size_t file_type_len = ARR_LEN(file_type);
 
 	static const char* mime_type[] = {
 		"text/html", "application/json",	   "image/jpeg", "image/jpeg", "image/gif", "image/png",
@@ -183,6 +181,7 @@ static Response* static_handler(Request* req) {
 	responseSetBody_data(response, fm.addr, fm.len);
 
 	// MIME TYPE
+	// It is impossible to not found any matched mimetype, because we had check static file is exist
 	const char* mimeType = mimeType_mux(req->uri);
 	char content_len[11];
 	snprintf(content_len, 11, "%ld", fm.len);
@@ -205,7 +204,6 @@ static const Account* get_account(const Cookies* c) {
 }
 
 static Response* home(Request* req) {
-	// ! What do here do?
 	const Account* my_acc = get_account(req->cookies);
 	if(my_acc) {
 		accountDel((Account*)my_acc);
@@ -227,41 +225,41 @@ static Response* dashboard(Request* req) {
 	if(unlikely(my_acc == NULL))
 		return NULL;
 
-	List* postCell = postGetLatestGraph(get_db(), my_acc->id, 0);
+	Posts* posts = postGetLatestGraph(get_db(), my_acc->id, 0);
 	char* res = NULL;
-	if(postCell)
+	if(!Posts_is_empty(posts))
 		res = bsNew("<ul class=\"posts\">");
 
-	// ! What do here do?
-	while(postCell) {
-		Post* post = (Post*)postCell->value;
-		Account* account = accountGetById(get_db(), post->authorId);
-		bool liked = likeLiked(get_db(), my_acc->id, post->id);
-		const size_t acc_len = strlen(account->name);
-		const size_t post_len = bsGetLen(post->body);
+	List* cur = NULL;
+	list_for_each(cur, &posts->list) {
+		Post* p = container_of(cur, Posts, list)->p;
 
-		char* bbuff = bsNewLen("", strlen(post->body) + 256);
+		Account* account = accountGetById(get_db(), p->authorId);
+		const size_t acc_len = strlen(account->name);
+		const size_t post_len = bsGetLen(p->body);
+		bool liked = likeLiked(get_db(), my_acc->id, p->id);
+		char* bbuff = bsNewLen("", bsGetLen(p->body) + 256);
 		snprintf(bbuff, 86 + acc_len + post_len,
 				 "<li class=\"post-item\">"
 				 "<div class=\"post-author\">%s</div>"
 				 "<div class=\"post-content\">"
 				 "%s"
 				 "</div>",
-				 account->name, post->body);
+				 account->name, p->body);
 		accountDel(account);
 		bsLCat(&res, bbuff);
 
 		char sbuff[128];
 		if(liked) {
-			snprintf(sbuff, 55, "<a class=\"btn\" href=\"/unlike/%d/\">Liked</a> - ", post->id);
+			snprintf(sbuff, 55, "<a class=\"btn\" href=\"/unlike/%d/\">Liked</a> - ", p->id);
 			bsLCat(&res, sbuff);
 		}
 		else {
-			snprintf(sbuff, 52, "<a class=\"btn\" href=\"/like/%d/\">Like</a> - ", post->id);
+			snprintf(sbuff, 52, "<a class=\"btn\" href=\"/like/%d/\">Like</a> - ", p->id);
 			bsLCat(&res, sbuff);
 		}
 
-		time_t t = post->createdAt;
+		time_t t = p->createdAt;
 		struct tm* info = gmtime(&t);
 		info->tm_hour = info->tm_hour + 8;
 		strftime(sbuff, 128, "%c GMT+8", info);
@@ -269,12 +267,8 @@ static Response* dashboard(Request* req) {
 		bsLCat(&res, "</li>");
 
 		bsDel(bbuff);
-		postDel(post);
-		List* postPCell = postCell;
-		postCell = postCell->next;
-
-		free(postPCell);
 	}
+	Posts_delete(posts);
 
 	Template* template = templateNew("templates/dashboard.html");
 	if(res) {
@@ -302,22 +296,23 @@ static Response* dashboard(Request* req) {
 
 // Preview someone's profile page
 static Response* profile(Request* req) {
-	// Check I'm logined
+	// Check I'm logged-in
 	const Account* my_acc = get_account(req->cookies);
 	if(unlikely(my_acc == NULL))
 		return NULL;
 
 	const Account* acc2 = accountGetById(get_db(), get_id(req->uri));
 
-	if(!acc2)
+	if(!acc2) {
+		accountDel((Account*)my_acc);
 		return NULL;
+	}
 	if(acc2->id == my_acc->id) {
 		accountDel((Account*)my_acc);
 		accountDel((Account*)acc2);
 		return responseNewRedirect("/dashboard/");
 	}
 
-	// VLA is not in POSIX1.
 	// Max length of uid is len(INT_MAX), in other words, the maxlen of uid is 10
 	char acc2_id_str[11] = { 0 };
 	snprintf(acc2_id_str, 11, "%d", acc2->id);
@@ -336,46 +331,41 @@ static Response* profile(Request* req) {
 	}
 	connectionDel(connection);
 
-	List* postPCell = NULL;
-	List* postCell = postGetLatest(get_db(), acc2->id, 0);
+	Posts* posts = postGetLatest(get_db(), acc2->id, 0);
 
 	char* res = NULL;
-	if(postCell)
+	if(!Posts_is_empty(posts))
 		res = bsNew("<ul class=\"posts\">");
-	bool liked;
-	char sbuff[128];
-	char* bbuff = NULL;
-	time_t t;
-	while(postCell) {
-		Post* post = (Post*)postCell->value;
-		liked = likeLiked(get_db(), my_acc->id, post->id);
 
-		const size_t body_len = strlen(post->body);
-		bbuff = bsNewLen("", body_len + 256);
+	List* cur = NULL;
+	list_for_each(cur, &posts->list) {
+		Post* p = container_of(cur, Posts, list)->p;
+
+		const size_t body_len = bsGetLen(p->body);
+		char* bbuff = bsNewLen("", body_len + 256);
 		snprintf(bbuff, 54 + body_len,
-				 "<li class=\"post-item\"><div class=\"post-author\">%s</div>", post->body);
+				 "<li class=\"post-item\"><div class=\"post-author\">%s</div>", p->body);
 		bsLCat(&res, bbuff);
 
+		char sbuff[128];
+		bool liked = likeLiked(get_db(), my_acc->id, p->id);
 		if(liked) {
 			bsLCat(&res, "Liked - ");
 		}
 		else {
-			snprintf(sbuff, 52, "<a class=\"btn\" href=\"/like/%d/\">Like</a> - ", post->id);
+			snprintf(sbuff, 52, "<a class=\"btn\" href=\"/like/%d/\">Like</a> - ", p->id);
 			bsLCat(&res, sbuff);
 		}
 
-		t = post->createdAt;
-		strftime(sbuff, 128, "%c GMT", gmtime(&t));
+		time_t t__ = p->createdAt;
+		strftime(sbuff, 128, "%c GMT", gmtime(&t__));
 		bsLCat(&res, sbuff);
 		bsLCat(&res, "</li>");
 
 		bsDel(bbuff);
-		postDel(post);
-		postPCell = postCell;
-		postCell = (List*)postCell->next;
-
-		free(postPCell);
 	}
+	Posts_delete(posts);
+
 	Template* template = templateNew("templates/profile.html");
 	if(res) {
 		bsLCat(&res, "</ul>");
@@ -405,7 +395,7 @@ static Response* profile(Request* req) {
 	return response;
 }
 
-// I post a post via HTTP POST
+// I posted a post via HTTP POST
 static Response* post(Request* req) {
 	const Account* acc = get_account(req->cookies);
 	if(unlikely(acc == NULL))
@@ -441,6 +431,8 @@ static Response* unlike(Request* req) {
 	if(query_get(req->queryString, "r"))
 		snprintf(redir_to, 32, "/profile/%d/", post->authorId);
 
+	postDel((Post*)post);
+
 fail:
 	accountDel((Account*)my_acc);
 	return responseNewRedirect(redir_to);
@@ -461,6 +453,8 @@ static Response* like(Request* req) {
 	if(query_get(req->queryString, "r"))
 		snprintf(redir_to, 32, "/profile/%d/", post->authorId);
 
+	postDel((Post*)post);
+
 fail:
 	accountDel((Account*)my_acc);
 	return responseNewRedirect(redir_to);
@@ -480,6 +474,8 @@ static Response* connect(Request* req) {
 
 	snprintf(redir_to, 32, "/profile/%d/", account->id);
 
+	accountDel((Account*)account);
+
 fail:
 	accountDel((Account*)my_acc);
 	return responseNewRedirect(redir_to);
@@ -497,32 +493,23 @@ static Response* search(Request* req) {
 		return NULL;
 
 	char* res = NULL;
-	char sbuff[1024];
-
-	List* accountCell = accountSearch(get_db(), query, 0);
-	if(accountCell)
+	Accounts* as = accountSearch(get_db(), query, 0);
+	if(!accounts_is_empty(as))
 		res = bsNew("<ul class=\"search-results\">");
 
-	Account* account = NULL;
-	List* accountPCell = NULL;
+	List* cur = NULL;
+	list_for_each(cur, &as->list) {
+		Account* a = container_of(cur, Accounts, list)->a;
+		const size_t name_len = strlen(a->name);
+		const size_t email_len = strlen(a->email);
 
-	while(accountCell) {
-		account = (Account*)accountCell->value;
-
-		const size_t name_len = strlen(account->name);
-		const size_t email_len = strlen(account->email);
-
+		char sbuff[1024];
 		snprintf(sbuff, 62 + name_len + email_len,
-				 "<li><a href=\"/profile/%d/\">%s</a> (<span>%s</span>)</li>\n", account->id,
-				 account->name, account->email);
+				 "<li><a href=\"/profile/%d/\">%s</a> (<span>%s</span>)</li>\n", a->id, a->name,
+				 a->email);
 		bsLCat(&res, sbuff);
-
-		accountDel(account);
-		accountPCell = accountCell;
-		accountCell = (List*)accountCell->next;
-
-		free(accountPCell);
 	}
+	accounts_delete(as);
 
 	if(res)
 		bsLCat(&res, "</ul>");
@@ -568,14 +555,14 @@ static Response* login(Request* req) {
 		const char* password = body_get(req->postBody, "password");
 
 		if(!username) {
-			invalid("usernameError", "Username missing!");
+			invalid(template, "usernameError", "Username missing!");
 		}
 		else {
 			templateSet(template, "formUsername", username);
 		}
 
 		if(!password) {
-			invalid("passwordError", "Password missing!");
+			invalid(template, "passwordError", "Password missing!");
 		}
 
 		bool valid = account_auth(get_db(), username, password);
@@ -583,20 +570,23 @@ static Response* login(Request* req) {
 		if(valid) {
 			Session* session = sessionCreate(get_db(), username, password);
 			if(session) {
+				char expire_string[64];
+				Cookie_gen_expire(expire_string, 3600 * 24 * 30);
+
 				// Setting cookie
-				Cookies* cookie = Cookies_init("sid", session->sessionId);
-				Cookies_set_expire(cookie, "sid", 3600 * 24 * 30);
+				Cookie* cookie = Cookie_init(eXpire_pair("sid", session->sessionId, SSPair));
+				Cookie_set_attr(cookie, EXPIRE, expire_string);
 				responseAddCookie(response, cookie);
 
 				sessionDel(session);
-				Cookies_delete(cookie);
+				Cookie_delete(cookie);
 
 				responseSetStatus(response, FOUND);
 				responseAddHeader(response, eXpire_pair("Location", "/dashboard/", SSPair));
 				goto ret;
 			}
 			else {
-				invalid("usernameError", "Invalid username or password.");
+				invalid(template, "usernameError", "Invalid username or password.");
 			}
 		}
 		else {
@@ -620,11 +610,12 @@ static Response* logout(Request* req) {
 
 	Response* response = responseNewRedirect("/");
 
-	Cookies* cookie = Cookies_init("sid", "");
-	Cookies_set_expire(cookie, "sid", -1);
-
+	Cookie* cookie = Cookie_init(eXpire_pair("sid", "", SSPair));
+	char buf[64];
+	Cookie_gen_expire(buf, -1);
+	Cookie_set_attr(cookie, EXPIRE, buf);
 	responseAddCookie(response, cookie);  // Copy
-	Cookies_delete(cookie);				  // delete
+	Cookie_delete(cookie);				  // delete
 
 	return response;
 }
@@ -652,56 +643,57 @@ static Response* signup(Request* req) {
 		const char* confirmPassword = body_get(req->postBody, "confirm-password");
 
 		if(!name) {
-			invalid("nameError", "You must enter your name!");
+			invalid(template, "nameError", "You must enter your name!");
 		}
 		else if(strlen(name) < 5 || strlen(name) > 50) {
-			invalid("nameError", "Your name must be between 5 and 50 characters long.");
+			invalid(template, "nameError", "Your name must be between 5 and 50 characters long.");
 		}
 		else {
 			templateSet(template, "formName", name);
 		}
 
 		if(!email) {
-			invalid("emailError", "You must enter an email!");
+			invalid(template, "emailError", "You must enter an email!");
 		}
 		else if(strchr(email, '@') == NULL) {
-			invalid("emailError", "Invalid email.");
+			invalid(template, "emailError", "Invalid email.");
 		}
 		else if(strlen(email) < 3 || strlen(email) > 50) {
-			invalid("emailError", "Your email must be between 3 and 50 characters long.");
+			invalid(template, "emailError", "Your email must be between 3 and 50 characters long.");
 		}
 		else if(!accountCheckEmail(get_db(), email)) {
-			invalid("emailError", "This email is taken.");
+			invalid(template, "emailError", "This email is taken.");
 		}
 		else {
 			templateSet(template, "formEmail", email);
 		}
 
 		if(!username) {
-			invalid("usernameError", "You must enter a username!");
+			invalid(template, "usernameError", "You must enter a username!");
 		}
 		else if(strlen(username) < 3 || strlen(username) > 50) {
-			invalid("usernameError", "Your username must be between 3 and 50 characters long.");
+			invalid(template, "usernameError",
+					"Your username must be between 3 and 50 characters long.");
 		}
 		else if(!accountCheckUsername(get_db(), username)) {
-			invalid("usernameError", "This username is taken.");
+			invalid(template, "usernameError", "This username is taken.");
 		}
 		else {
 			templateSet(template, "formUsername", username);
 		}
 
 		if(!password) {
-			invalid("passwordError", "You must enter a password!");
+			invalid(template, "passwordError", "You must enter a password!");
 		}
 		else if(strlen(password) < 8) {
-			invalid("passwordError", "Your password must be at least 8 characters long!");
+			invalid(template, "passwordError", "Your password must be at least 8 characters long!");
 		}
 
 		if(!confirmPassword) {
-			invalid("confirmPasswordError", "You must confirm your password.");
+			invalid(template, "confirmPasswordError", "You must confirm your password.");
 		}
 		else if(strcmp(password, confirmPassword) != 0) {
-			invalid("confirmPasswordError", "The two passwords must be the same.");
+			invalid(template, "confirmPasswordError", "The two passwords must be the same.");
 		}
 
 		if(valid) {
@@ -715,7 +707,7 @@ static Response* signup(Request* req) {
 				goto ret;
 			}
 			else {
-				invalid("nameError", "Unexpected error. Please try again later.");
+				invalid(template, "nameError", "Unexpected error. Please try again later.");
 			}
 		}
 	}
