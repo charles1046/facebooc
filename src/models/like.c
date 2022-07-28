@@ -16,15 +16,14 @@ Like* likeNew(int id, int createdAt, int accountId, int authorId, int postId) {
 }
 
 Like* likeCreate(sqlite3* DB, int accountId, int authorId, int postId) {
-	int rc, t;
 	Like* like = NULL;
-	sqlite3_stmt* statement;
+	sqlite3_stmt* statement = NULL;
 
-	t = time(NULL);
-	rc = sqlite3_prepare_v2(DB,
-							"INSERT INTO likes(createdAt, account, author, post)"
-							"     VALUES      (        ?,       ?,      ?,    ?)",
-							-1, &statement, NULL);
+	int t = time(NULL);
+	int rc = sqlite3_prepare_v2(DB,
+								"INSERT INTO likes(createdAt, account, author, post)"
+								"     VALUES      (        ?,       ?,      ?,    ?)",
+								-1, &statement, NULL);
 
 	if(rc != SQLITE_OK)
 		return NULL;

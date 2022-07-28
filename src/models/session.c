@@ -1,22 +1,25 @@
+#include "models/session.h"
+#include "base64.h"
+#include "basic_string.h"
+#include "utility.h"
+
+#include <string.h>
 #include <time.h>
 
-#include "bs.h"
-#include "models/session.h"
-
-Session* sessionNew(int id, int createdAt, int accountId, char* sessionId) {
+Session* sessionNew(int id, int createdAt, int accountId, const char* sessionId) {
 	Session* session = malloc(sizeof(Session));
 
 	session->id = id;
 	session->createdAt = createdAt;
 	session->accountId = accountId;
-	session->sessionId = bsNew(sessionId);
+	session->sessionId = strdup(sessionId);
 
 	return session;
 }
 
 Session* sessionGetBySId(sqlite3* DB, const char* sid) {
 	Session* session = NULL;
-	sqlite3_stmt* statement;
+	sqlite3_stmt* statement = NULL;
 
 	if(sqlite3_prepare_v2(DB,
 						  "SELECT id, createdAt, account, session"
@@ -31,9 +34,9 @@ Session* sessionGetBySId(sqlite3* DB, const char* sid) {
 		goto fail;
 
 	if(sqlite3_step(statement) == SQLITE_ROW) {
-		session =
-			sessionNew(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
-					   sqlite3_column_int(statement, 2), (char*)sqlite3_column_text(statement, 3));
+		session = sessionNew(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
+							 sqlite3_column_int(statement, 2),
+							 (const char*)sqlite3_column_text(statement, 3));
 	}
 
 fail:
@@ -42,10 +45,8 @@ fail:
 }
 
 Session* sessionCreate(sqlite3* DB, const char* username, const char* password) {
-	int aid;
-	char* sid = NULL;
 	Session* session = NULL;
-	sqlite3_stmt* statement;
+	sqlite3_stmt* statement = NULL;
 
 	if(sqlite3_prepare_v2(DB,
 						  "SELECT id"
@@ -57,15 +58,20 @@ Session* sessionCreate(sqlite3* DB, const char* username, const char* password) 
 		return NULL;
 	}
 
-	if(sqlite3_bind_text(statement, 1, username, -1, NULL) != SQLITE_OK)
-		goto fail;
-	if(sqlite3_bind_text(statement, 2, password, -1, NULL) != SQLITE_OK)
+	const Basic_string orig_pw = { .data = (char*)password, .size = strlen(password) };
+	char hashed_pw[65];
+	sha256_string(hashed_pw, &orig_pw);
+
+	Basic_string* username_encoded = base64_encode(username, strlen(username));
+
+	if(sqlite3_bind_text(statement, 1, username_encoded->data, -1, NULL) != SQLITE_OK)
+		goto username_encoded_dtor;
+	if(sqlite3_bind_text(statement, 2, hashed_pw, -1, NULL) != SQLITE_OK)
 		goto fail;
 	if(sqlite3_step(statement) != SQLITE_ROW)
 		goto fail;
 
-	sid = bsRandom(24, (char*)username);
-	aid = sqlite3_column_int(statement, 0);
+	int aid = sqlite3_column_int(statement, 0);
 	sqlite3_finalize(statement);
 
 	if(sqlite3_prepare_v2(DB,
@@ -80,16 +86,22 @@ Session* sessionCreate(sqlite3* DB, const char* username, const char* password) 
 		goto fail;
 	if(sqlite3_bind_int(statement, 2, aid) != SQLITE_OK)
 		goto fail;
-	if(sqlite3_bind_text(statement, 3, sid, -1, NULL) != SQLITE_OK)
-		goto fail;
-	if(sqlite3_step(statement) != SQLITE_DONE)
-		goto fail;
 
-	session = sessionGetBySId(DB, sid);
+	Basic_string* sid = gen_random_dummy_string(64);
+	if(sqlite3_bind_text(statement, 3, sid->data, -1, NULL) != SQLITE_OK)
+		goto sid_dtor;
+
+	if(sqlite3_step(statement) != SQLITE_DONE)
+		goto sid_dtor;
+
+	session = sessionGetBySId(DB, sid->data);
+
+sid_dtor:
+	Basic_string_delete(sid);
 
 fail:
-	if(sid)
-		bsDel(sid);
+username_encoded_dtor:
+	Basic_string_delete(username_encoded);
 
 	sqlite3_finalize(statement);
 
@@ -97,6 +109,6 @@ fail:
 }
 
 void sessionDel(Session* session) {
-	bsDel(session->sessionId);
+	free(session->sessionId);
 	free(session);
 }

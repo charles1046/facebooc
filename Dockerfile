@@ -3,7 +3,7 @@ LABEL Author="zxc25077667@protonmail.com"
 WORKDIR /app
 
 RUN apt-get update -y && \
-    apt-get install -y libsqlite3-dev \
+    apt-get install -y libsqlite3-dev libssl-dev \
     build-essential sassc
 COPY . .
 RUN make release
@@ -14,7 +14,7 @@ ENV port 8080
 ENV DB_PATH "/app/data/db.sqlite3"
 WORKDIR /app
 
-RUN apk add sqlite-dev libc6-compat --no-cache && \
+RUN apk add sqlite-dev libc6-compat libressl-dev --no-cache && \
     mkdir -p /app/data && touch ${DB_PATH} && chmod 600 ${DB_PATH} && chown -R 1000:1000 /app/data
 COPY ["static/image", "/app/static/image/"]
 COPY ["templates", "/app/templates/"]

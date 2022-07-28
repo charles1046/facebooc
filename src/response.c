@@ -1,5 +1,4 @@
 #include "response.h"
-#include "bs.h"
 #include "http/header.h"
 #include "utility.h"
 
@@ -73,25 +72,17 @@ void responseSetStatus(Response* response, Status status) {
 	response->status = status;
 }
 
-void responseSetBody_move(Response* restrict response, const char* restrict ctx) {
-	free((void*)response->body);
-	response->body = strdup(ctx);
-	response->body_len = bsGetLen(ctx);
-	bsDel((char*)ctx);
+void responseSetBody(Response* restrict r, const Basic_string* restrict ctx) {
+	free((char*)r->body);
+	r->body = strdup(ctx->data);
+	r->body_len = ctx->size;
 }
 
-void responseSetBody_data(Response* restrict r, const void* restrict ctx, size_t len) {
-	free((void*)r->body);
-
-	r->body = memdup(ctx, len);
-	r->body_len = len;
-}
-
-void responseSetBody_data_move(Response* restrict r, void* restrict ctx, size_t len) {
-	free((void*)r->body);
-
-	r->body = ctx;
-	r->body_len = len;
+void responseSetBody_move(Response* restrict response, Basic_string* restrict ctx) {
+	free((char*)response->body);
+	response->body = ctx->data;
+	response->body_len = ctx->size;
+	free(ctx);
 	ctx = NULL;
 }
 

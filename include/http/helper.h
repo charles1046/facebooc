@@ -12,6 +12,8 @@
 // And, this function also constrain the end of decoded string is NULL byte
 char* url_decoder(const char* str);
 
+char* url_encoder(const char* str);
+
 // New a pair which duplicates the key-value pair like "<key>=<value>"
 // <key> is separated at the 'first' appearing '=' character
 // <value> is start at the one byte next to the fist '=', and end at the ena of string

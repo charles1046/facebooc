@@ -9,7 +9,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "bs.h"
 #include "db.h"
 #include "facebooc_server.h"
 #include "http/cookies.h"
@@ -178,7 +177,7 @@ static Response* static_handler(Request* req) {
 		return NULL;
 
 	Response* response = responseNew();
-	responseSetBody_data(response, fm.addr, fm.len);
+	responseSetBody(response, (Basic_string*)&fm);	// fm's memory model is same as Basic_string
 
 	// MIME TYPE
 	// It is impossible to not found any matched mimetype, because we had check static file is exist
@@ -200,7 +199,9 @@ static const Account* get_account(const Cookies* c) {
 	if(unlikely(c == NULL))
 		return NULL;
 	Cookie* cookie = Cookies_get(c, "sid");
-	return accountGetBySId(get_db(), Cookie_get_attr(cookie, VALUE));
+	const Basic_string sid = { .data = (char*)Cookie_get_attr(cookie, VALUE),
+							   .size = strlen(Cookie_get_attr(cookie, VALUE)) };
+	return accountGetBySId(get_db(), &sid);
 }
 
 static Response* home(Request* req) {
@@ -226,66 +227,74 @@ static Response* dashboard(Request* req) {
 		return NULL;
 
 	Posts* posts = postGetLatestGraph(get_db(), my_acc->id, 0);
-	char* res = NULL;
+
+	// A flexible string containing the returning posts' context
+	Basic_string* ctx = NULL;
 	if(!Posts_is_empty(posts))
-		res = bsNew("<ul class=\"posts\">");
+		ctx = Basic_string_init("<ul class=\"posts\">");
 
 	List* cur = NULL;
 	list_for_each(cur, &posts->list) {
 		Post* p = container_of(cur, Posts, list)->p;
 
-		Account* account = accountGetById(get_db(), p->authorId);
-		const size_t acc_len = strlen(account->name);
-		const size_t post_len = bsGetLen(p->body);
-		bool liked = likeLiked(get_db(), my_acc->id, p->id);
-		char* bbuff = bsNewLen("", bsGetLen(p->body) + 256);
-		snprintf(bbuff, 86 + acc_len + post_len,
+		// Post's author name is the only data we need
+		Account* post_author = accountGetById(get_db(), p->authorId);
+		Basic_string* author_name = post_author->name;
+		post_author->name = NULL;
+		accountDel(post_author);
+
+		// Generate a post entry
+		size_t entry_size = p->body->size + author_name->size + 86;	 // 86 is a fmt str
+		char* entry_buf = malloc(entry_size + 1);
+		snprintf(entry_buf, entry_size,
 				 "<li class=\"post-item\">"
 				 "<div class=\"post-author\">%s</div>"
 				 "<div class=\"post-content\">"
 				 "%s"
 				 "</div>",
-				 account->name, p->body);
-		accountDel(account);
-		bsLCat(&res, bbuff);
+				 author_name->data, p->body->data);
+		Basic_string_delete(author_name);
+		// Append post entry into returning ctx
+		Basic_string_append_raw(ctx, entry_buf);
+		free(entry_buf);
 
+		// Add like/unlike button
 		char sbuff[128];
-		if(liked) {
+		bool liked = likeLiked(get_db(), my_acc->id, p->id);
+		if(liked)  // If I liked it
 			snprintf(sbuff, 55, "<a class=\"btn\" href=\"/unlike/%d/\">Liked</a> - ", p->id);
-			bsLCat(&res, sbuff);
-		}
-		else {
+		else
 			snprintf(sbuff, 52, "<a class=\"btn\" href=\"/like/%d/\">Like</a> - ", p->id);
-			bsLCat(&res, sbuff);
-		}
+		Basic_string_append_raw(ctx, sbuff);
 
+		// Add post's create time
 		time_t t = p->createdAt;
 		struct tm* info = gmtime(&t);
 		info->tm_hour = info->tm_hour + 8;
 		strftime(sbuff, 128, "%c GMT+8", info);
-		bsLCat(&res, sbuff);
-		bsLCat(&res, "</li>");
 
-		bsDel(bbuff);
+		Basic_string_append_raw(ctx, sbuff);
+		Basic_string_append_raw(ctx, "</li>");
 	}
 	Posts_delete(posts);
 
 	Template* template = templateNew("templates/dashboard.html");
-	if(res) {
-		bsLCat(&res, "</ul>");
-		templateSet(template, "graph", res);
-		bsDel(res);
+	if(ctx) {
+		Basic_string_append_raw(ctx, "</ul>");
+		templateSet(template, "graph", ctx->data);
 	}
 	else {
 		templateSet(template, "graph",
 					"<ul class=\"posts\"><div class=\"not-found\">Nothing "
 					"here.</div></ul>");
 	}
+	Basic_string_delete(ctx);
 
 	templateSet(template, "active", "dashboard");
 	templateSet(template, "loggedIn", "t");
 	templateSet(template, "subtitle", "Dashboard");
-	templateSet(template, "accountName", my_acc->name);
+	templateSet(template, "accountName", my_acc->name->data);
+
 	Response* response = responseNew();
 	responseSetStatus(response, OK);
 	responseSetBody_move(response, templateRender(template));
@@ -298,7 +307,7 @@ static Response* dashboard(Request* req) {
 static Response* profile(Request* req) {
 	// Check I'm logged-in
 	const Account* my_acc = get_account(req->cookies);
-	if(unlikely(my_acc == NULL))
+	if(unlikely(!my_acc))
 		return NULL;
 
 	const Account* acc2 = accountGetById(get_db(), get_id(req->uri));
@@ -314,78 +323,78 @@ static Response* profile(Request* req) {
 	}
 
 	// Max length of uid is len(INT_MAX), in other words, the maxlen of uid is 10
-	char acc2_id_str[11] = { 0 };
-	snprintf(acc2_id_str, 11, "%d", acc2->id);
+	char acc2_id_str[11];
+	snprintf(acc2_id_str, 10, "%d", acc2->id);
 
 	Connection* connection = connectionGetByAccountIds(get_db(), my_acc->id, acc2->id);
-	char connectStr[512] = { 0 };
+	char connectStr[128];  // Name max len is 50
 	if(connection) {
-		snprintf(connectStr, 26 + strlen(acc2->name), "You and %s are connected!", acc2->name);
+		snprintf(connectStr, 26 + acc2->name->size, "You and %s are connected!", acc2->name->data);
 	}
 	else {
-		const size_t name_len = strlen(acc2->name);
-		snprintf(connectStr, 76 + name_len + 10,
+		snprintf(connectStr, 76 + acc2->name->size + 10,
 				 "You and %s are not connected."
 				 " <a href=\"/connect/%d/\">Click here</a> to connect!",
-				 acc2->name, acc2->id);
+				 acc2->name->data, acc2->id);
 	}
 	connectionDel(connection);
 
 	Posts* posts = postGetLatest(get_db(), acc2->id, 0);
 
-	char* res = NULL;
+	Basic_string* ctx = NULL;
 	if(!Posts_is_empty(posts))
-		res = bsNew("<ul class=\"posts\">");
+		ctx = Basic_string_init("<ul class=\"posts\">");
 
 	List* cur = NULL;
 	list_for_each(cur, &posts->list) {
 		Post* p = container_of(cur, Posts, list)->p;
 
-		const size_t body_len = bsGetLen(p->body);
-		char* bbuff = bsNewLen("", body_len + 256);
-		snprintf(bbuff, 54 + body_len,
-				 "<li class=\"post-item\"><div class=\"post-author\">%s</div>", p->body);
-		bsLCat(&res, bbuff);
+		// Post's entry
+		char* entry_buf = malloc(p->body->size + 55);
+		snprintf(entry_buf, 54 + p->body->size,
+				 "<li class=\"post-item\"><div class=\"post-author\">%s</div>", p->body->data);
+		Basic_string_append_raw(ctx, entry_buf);
+		free(entry_buf);
 
+		// Append liked entry
 		char sbuff[128];
 		bool liked = likeLiked(get_db(), my_acc->id, p->id);
-		if(liked) {
-			bsLCat(&res, "Liked - ");
-		}
+		if(liked)
+			Basic_string_append_raw(ctx, "Liked - ");
 		else {
 			snprintf(sbuff, 52, "<a class=\"btn\" href=\"/like/%d/\">Like</a> - ", p->id);
-			bsLCat(&res, sbuff);
+			Basic_string_append_raw(ctx, sbuff);
 		}
 
+		// Add post's create time
 		time_t t__ = p->createdAt;
 		strftime(sbuff, 128, "%c GMT", gmtime(&t__));
-		bsLCat(&res, sbuff);
-		bsLCat(&res, "</li>");
-
-		bsDel(bbuff);
+		Basic_string_append_raw(ctx, sbuff);
+		Basic_string_append_raw(ctx, "</li>");
 	}
 	Posts_delete(posts);
 
 	Template* template = templateNew("templates/profile.html");
-	if(res) {
-		bsLCat(&res, "</ul>");
-		templateSet(template, "profilePosts", res);
-		bsDel(res);
+	if(ctx) {
+		Basic_string_append_raw(ctx, "</ul>");
+		templateSet(template, "profilePosts", ctx->data);
 	}
 	else {
 		templateSet(template, "profilePosts",
 					"<h4 class=\"not-found\">This person has not posted "
 					"anything yet!</h4>");
 	}
+	Basic_string_delete(ctx);
 
 	templateSet(template, "active", "profile");
 	templateSet(template, "loggedIn", "t");
-	templateSet(template, "subtitle", acc2->name);
+	templateSet(template, "subtitle", acc2->name->data);
 	templateSet(template, "profileId", acc2_id_str);
-	templateSet(template, "profileName", acc2->name);
-	templateSet(template, "profileEmail", acc2->email);
+	templateSet(template, "profileName", acc2->name->data);
+	templateSet(template, "profileEmail", acc2->email->data);
 	templateSet(template, "profileConnect", connectStr);
-	templateSet(template, "accountName", my_acc->name);
+	templateSet(template, "accountName", my_acc->name->data);
+
 	Response* response = responseNew();
 	responseSetStatus(response, OK);
 	responseSetBody_move(response, templateRender(template));
@@ -404,12 +413,14 @@ static Response* post(Request* req) {
 	if(unlikely(req->method != POST))
 		goto fail;
 
-	const char* postStr = body_get(req->postBody, "post");
+	Basic_string* postStr = Basic_string_init(body_get(req->postBody, "post"));
 
-	if(strlen(postStr) == 0)
+	if(postStr->size == 0) {
+		Basic_string_delete(postStr);
 		goto fail;
-	else if(strlen(postStr) < MAX_BODY_LEN)
-		postDel(postCreate(get_db(), acc->id, postStr));
+	}
+	else if(postStr->size < MAX_BODY_LEN)
+		postCreate_move(get_db(), acc->id, postStr);
 
 fail:
 	accountDel((Account*)acc);
@@ -487,51 +498,52 @@ static Response* search(Request* req) {
 		return responseNewRedirect("/login/");
 	accountDel((Account*)my_acc);
 
-	const char* query = query_get(req->queryString, "q");
+	const Basic_string* query = Basic_string_init(query_get(req->queryString, "q"));
 
-	if(!query)
+	if(query->size == 0) {
+		Basic_string_delete((Basic_string*)query);
 		return NULL;
+	}
 
-	char* res = NULL;
+	Basic_string* ctx = NULL;
+
 	Accounts* as = accountSearch(get_db(), query, 0);
 	if(!accounts_is_empty(as))
-		res = bsNew("<ul class=\"search-results\">");
+		ctx = Basic_string_init("<ul class=\"search-results\">");
 
 	List* cur = NULL;
 	list_for_each(cur, &as->list) {
 		Account* a = container_of(cur, Accounts, list)->a;
-		const size_t name_len = strlen(a->name);
-		const size_t email_len = strlen(a->email);
 
-		char sbuff[1024];
-		snprintf(sbuff, 62 + name_len + email_len,
-				 "<li><a href=\"/profile/%d/\">%s</a> (<span>%s</span>)</li>\n", a->id, a->name,
-				 a->email);
-		bsLCat(&res, sbuff);
+		char sbuff[128];  // name and email's max len are both 50
+		snprintf(sbuff, 62 + a->name->size + a->email->size,
+				 "<li><a href=\"/profile/%d/\">%s</a> (<span>%s</span>)</li>\n", a->id,
+				 a->name->data, a->email->data);
+		Basic_string_append_raw(ctx, sbuff);
 	}
 	accounts_delete(as);
 
-	if(res)
-		bsLCat(&res, "</ul>");
+	if(ctx)
+		Basic_string_append_raw(ctx, "</ul>");
 
-	Response* response = responseNew();
 	Template* template = templateNew("templates/search.html");
-	responseSetStatus(response, OK);
 
-	if(!res) {
+	if(!ctx)
 		templateSet(template, "results",
 					"<h4 class=\"not-found\">There were no results "
 					"for your query.</h4>");
-	}
-	else {
-		templateSet(template, "results", res);
-		bsDel(res);
-	}
+	else
+		templateSet(template, "results", ctx->data);
+	Basic_string_delete(ctx);
 
-	templateSet(template, "searchQuery", query);
+	templateSet(template, "searchQuery", query->data);
 	templateSet(template, "active", "search");
 	templateSet(template, "loggedIn", "t");
 	templateSet(template, "subtitle", "Search");
+	Basic_string_delete((Basic_string*)query);
+
+	Response* response = responseNew();
+	responseSetStatus(response, OK);
 	responseSetBody_move(response, templateRender(template));
 	templateDel(template);
 	return response;
@@ -551,24 +563,28 @@ static Response* login(Request* req) {
 	templateSet(template, "subtitle", "Login");
 
 	if(req->method == POST) {
-		const char* username = body_get(req->postBody, "username");
-		const char* password = body_get(req->postBody, "password");
+		const Basic_string* username = Basic_string_init(body_get(req->postBody, "username"));
+		const Basic_string* password = Basic_string_init(body_get(req->postBody, "password"));
 
-		if(!username) {
-			invalid(template, "usernameError", "Username missing!");
+		if(!username->size) {
+			invalid(template, "usernameError", "Username is missing!");
 		}
 		else {
-			templateSet(template, "formUsername", username);
+			templateSet(template, "formUsername", username->data);
 		}
 
-		if(!password) {
-			invalid(template, "passwordError", "Password missing!");
+		if(!password->size) {
+			invalid(template, "passwordError", "Password is missing!");
 		}
 
 		bool valid = account_auth(get_db(), username, password);
 
 		if(valid) {
-			Session* session = sessionCreate(get_db(), username, password);
+			Session* session = sessionCreate(get_db(), username->data, password->data);
+			// Username and password are no longer to use
+			Basic_string_delete((Basic_string*)username);
+			Basic_string_delete((Basic_string*)password);
+
 			if(session) {
 				char expire_string[64];
 				Cookie_gen_expire(expire_string, 3600 * 24 * 30);
@@ -592,6 +608,9 @@ static Response* login(Request* req) {
 		else {
 			invalid(template, "usernameError", "Invalid username or password.");
 		}
+
+		Basic_string_delete((Basic_string*)username);
+		Basic_string_delete((Basic_string*)password);
 	}
 
 	responseSetBody_move(response, templateRender(template));
@@ -603,7 +622,7 @@ ret:
 
 static Response* logout(Request* req) {
 	const Account* my_acc = get_account(req->cookies);
-	if(unlikely(!my_acc))  // It's usually logined
+	if(unlikely(!my_acc))  // It's usually logged in
 		return responseNewRedirect("/");
 
 	accountDel((Account*)my_acc);
@@ -623,7 +642,7 @@ static Response* logout(Request* req) {
 static Response* signup(Request* req) {
 	const Account* my_acc = get_account(req->cookies);
 	if(unlikely(my_acc != NULL)) {
-		// If you already logined, you should not regist
+		// If you already logged in, you should not register a new account
 		accountDel((Account*)my_acc);
 		return responseNewRedirect("/dashboard/");
 	}
@@ -635,43 +654,49 @@ static Response* signup(Request* req) {
 	responseSetStatus(response, OK);
 
 	if(req->method == POST) {
-		bool valid = true;
-		const char* name = body_get(req->postBody, "name");
-		const char* email = body_get(req->postBody, "email");
-		const char* username = body_get(req->postBody, "username");
-		const char* password = body_get(req->postBody, "password");
-		const char* confirmPassword = body_get(req->postBody, "confirm-password");
+		bool valid = false;
+		const Basic_string* name = Basic_string_init(body_get(req->postBody, "name"));
+		const Basic_string* email = Basic_string_init(body_get(req->postBody, "email"));
+		const Basic_string* username = Basic_string_init(body_get(req->postBody, "username"));
+		const Basic_string* password = Basic_string_init(body_get(req->postBody, "password"));
 
-		if(!name) {
+		// Although confirmPassword is not used in register model, we also use Basic_string for
+		// consistency
+		const Basic_string* confirmPassword =
+			Basic_string_init(body_get(req->postBody, "confirm-password"));
+
+		if(!name->size) {
 			invalid(template, "nameError", "You must enter your name!");
 		}
-		else if(strlen(name) < 5 || strlen(name) > 50) {
+		else if(name->size < 5 || name->size > 50) {
 			invalid(template, "nameError", "Your name must be between 5 and 50 characters long.");
 		}
 		else {
-			templateSet(template, "formName", name);
+			templateSet(template, "formName", name->data);
+			valid = true;
 		}
 
-		if(!email) {
+		if(!email->size) {
 			invalid(template, "emailError", "You must enter an email!");
 		}
-		else if(strchr(email, '@') == NULL) {
+		else if(strchr(email->data, '@') == NULL) {
 			invalid(template, "emailError", "Invalid email.");
 		}
-		else if(strlen(email) < 3 || strlen(email) > 50) {
+		else if(email->size < 3 || email->size > 50) {
 			invalid(template, "emailError", "Your email must be between 3 and 50 characters long.");
 		}
 		else if(!accountCheckEmail(get_db(), email)) {
 			invalid(template, "emailError", "This email is taken.");
 		}
 		else {
-			templateSet(template, "formEmail", email);
+			templateSet(template, "formEmail", email->data);
+			valid = true;
 		}
 
-		if(!username) {
+		if(!username->size) {
 			invalid(template, "usernameError", "You must enter a username!");
 		}
-		else if(strlen(username) < 3 || strlen(username) > 50) {
+		else if(username->size < 3 || username->size > 50) {
 			invalid(template, "usernameError",
 					"Your username must be between 3 and 50 characters long.");
 		}
@@ -679,36 +704,40 @@ static Response* signup(Request* req) {
 			invalid(template, "usernameError", "This username is taken.");
 		}
 		else {
-			templateSet(template, "formUsername", username);
+			templateSet(template, "formUsername", username->data);
+			valid = true;
 		}
 
-		if(!password) {
+		if(!password->size) {
 			invalid(template, "passwordError", "You must enter a password!");
 		}
-		else if(strlen(password) < 8) {
+		else if(password->size < 8) {
 			invalid(template, "passwordError", "Your password must be at least 8 characters long!");
 		}
+		else
+			valid = true;
 
-		if(!confirmPassword) {
+		if(!confirmPassword->size) {
 			invalid(template, "confirmPasswordError", "You must confirm your password.");
 		}
-		else if(strcmp(password, confirmPassword) != 0) {
+		else if(strcmp(password->data, confirmPassword->data) != 0) {
 			invalid(template, "confirmPasswordError", "The two passwords must be the same.");
 		}
+		else
+			valid = true;
 
 		if(valid) {
-			Account* account = accountCreate(get_db(), name, email, username, password);
+			// Register an account
+			accountDel(accountCreate(get_db(), name, email, username, password));
+			Basic_string_delete((Basic_string*)name);
+			Basic_string_delete((Basic_string*)email);
+			Basic_string_delete((Basic_string*)username);
+			Basic_string_delete((Basic_string*)password);
+			Basic_string_delete((Basic_string*)confirmPassword);
 
-			if(account) {
-				accountDel(account);
-
-				responseSetStatus(response, FOUND);
-				responseAddHeader(response, eXpire_pair("Location", "/login/", SSPair));
-				goto ret;
-			}
-			else {
-				invalid(template, "nameError", "Unexpected error. Please try again later.");
-			}
+			responseSetStatus(response, FOUND);
+			responseAddHeader(response, eXpire_pair("Location", "/login/", SSPair));
+			goto ret;
 		}
 	}
 
@@ -723,10 +752,11 @@ static Response* notFound(Request* req) {
 	const int is_loggedIn = !!my_acc;
 	accountDel((Account*)my_acc);
 
-	Response* response = responseNew();
 	Template* template = templateNew("templates/404.html");
 	templateSet(template, "loggedIn", is_loggedIn ? "t" : "");
 	templateSet(template, "subtitle", "404 Not Found");
+
+	Response* response = responseNew();
 	responseSetStatus(response, NOT_FOUND);
 	responseSetBody_move(response, templateRender(template));
 	templateDel(template);

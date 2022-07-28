@@ -54,6 +54,29 @@ char* url_decoder(const char* str) {
 	return new_url;
 }
 
+// https://gist.github.com/jesobreira/4ba48d1699b7527a4a514bfa1d70f61a
+char* url_encoder(const char* str) {
+	static const char* hex = "0123456789abcdef";
+	size_t url_len = strlen(str);
+
+	// allocate memory for the worst possible case (all characters need to be encoded)
+	char* res = (char*)malloc(url_len * 3 + 1);
+	int pos = 0;
+	for(size_t i = 0; i < url_len; i++) {
+		if(('a' <= str[i] && str[i] <= 'z') || ('A' <= str[i] && str[i] <= 'Z')
+		   || ('0' <= str[i] && str[i] <= '9')) {
+			res[pos++] = str[i];
+		}
+		else {
+			res[pos++] = '%';
+			res[pos++] = hex[str[i] >> 4];
+			res[pos++] = hex[str[i] & 15];
+		}
+	}
+	res[pos] = '\0';
+	return res;
+}
+
 SPair* query_entry(const char* str) {
 	const char* seperator = find_first_of(str, "=");
 	struct string_view key = { .begin = str, .end = seperator, .size = seperator - str };
@@ -77,7 +100,9 @@ SPair* pair_lexer(const char* str, char delim, char term) {
 		goto ret;
 
 	string_view key = { .begin = str, .end = delim_ptr, .size = delim_ptr - str };
-	string_view value = { .begin = delim_ptr + 1, .end = term_ptr, .size = term_ptr - delim_ptr };
+	string_view value = { .begin = delim_ptr + 1,
+						  .end = term_ptr,
+						  .size = term_ptr - delim_ptr - 1 };
 
 	p = make_pair(&key, &value);
 

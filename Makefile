@@ -1,5 +1,5 @@
 CFLAGS = -std=gnu11 -Wall -Wextra -Werror -I
-LDFLAGS = -lsqlite3 -lpthread -ldl -lm -lc
+LDFLAGS = -lsqlite3 -lpthread -ldl -lm -lc -lssl -lcrypto
 INCLUDE = include
 
 export CFLAGS LDFLAGS DEBUG

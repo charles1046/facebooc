@@ -11,9 +11,11 @@ typedef struct Session {
 	char* sessionId;
 } Session;
 
-Session* sessionNew(int, int, int, char*);
-Session* sessionGetBySId(sqlite3*, const char*);
-Session* sessionCreate(sqlite3*, const char*, const char*);
-void sessionDel(Session*);
+Session* sessionNew(int id, int createdAt, int accountId, const char* sessionId);
+Session* sessionGetBySId(sqlite3* DB, const char* sid);
+
+// Check if username and password is matched, return NULL if it failed
+Session* sessionCreate(sqlite3* DB, const char* username, const char* password);
+void sessionDel(Session* s);
 
 #endif

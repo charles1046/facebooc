@@ -1,6 +1,5 @@
 #include <time.h>
 
-#include "bs.h"
 #include "models/post.h"
 
 static inline Posts* Posts_new(void);
@@ -11,41 +10,50 @@ Post* postNew(int id, int createdAt, int authorId, const char* body) {
 	post->id = id;
 	post->createdAt = createdAt;
 	post->authorId = authorId;
-	post->body = bsNew(body);
+	post->body = Basic_string_init(body);
 
 	return post;
 }
 
-Post* postCreate(sqlite3* DB, int authorId, const char* body) {
-	int rc, t;
-	Post* post = NULL;
-	sqlite3_stmt* statement;
+Post* postNew_move(int id, int createdAt, int authorId, Basic_string* body) {
+	Post* post = malloc(sizeof(Post));
 
-	t = time(NULL);
-	rc = sqlite3_prepare_v2(DB,
-							"INSERT INTO posts(createdAt, author, body)"
-							"     VALUES      (        ?,      ?,    ?)",
-							-1, &statement, NULL);
+	post->id = id;
+	post->createdAt = createdAt;
+	post->authorId = authorId;
+	post->body = body;
+
+	body = NULL;
+
+	return post;
+}
+
+void postCreate_move(sqlite3* DB, int authorId, Basic_string* body) {
+	sqlite3_stmt* statement = NULL;
+
+	int rc = sqlite3_prepare_v2(DB,
+								"INSERT INTO posts(createdAt, author, body)"
+								"     VALUES      (        ?,      ?,    ?)",
+								-1, &statement, NULL);
 
 	if(rc != SQLITE_OK)
-		return NULL;
+		return;
 
-	char* escapedBody = bsEscape(body);
+	html_escape_trans(body);
 
-	if(sqlite3_bind_int(statement, 1, t) != SQLITE_OK)
+	if(sqlite3_bind_int(statement, 1, time(NULL)) != SQLITE_OK)
 		goto fail;
 	if(sqlite3_bind_int(statement, 2, authorId) != SQLITE_OK)
 		goto fail;
-	if(sqlite3_bind_text(statement, 3, escapedBody, -1, NULL) != SQLITE_OK)
+	if(sqlite3_bind_text(statement, 3, body->data, -1, NULL) != SQLITE_OK)
 		goto fail;
 
 	if(sqlite3_step(statement) == SQLITE_DONE)
-		post = postNew(sqlite3_last_insert_rowid(DB), t, authorId, body);
+		sqlite3_last_insert_rowid(DB);
 
 fail:
-	bsDel(escapedBody);
+	Basic_string_delete(body);
 	sqlite3_finalize(statement);
-	return post;
 }
 
 Post* postGetById(sqlite3* DB, int id) {
@@ -69,9 +77,11 @@ Post* postGetById(sqlite3* DB, int id) {
 	if(sqlite3_step(statement) != SQLITE_ROW)
 		goto fail;
 
-	post = postNew(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
-				   sqlite3_column_int(statement, 2),
-				   bsNewline2BR((char*)sqlite3_column_text(statement, 3)));
+	Basic_string* body = Basic_string_init((const char*)sqlite3_column_text(statement, 3));
+	newline_to_br(body);
+
+	post = postNew_move(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
+						sqlite3_column_int(statement, 2), body);
 
 fail:
 	sqlite3_finalize(statement);
@@ -102,14 +112,14 @@ Posts* postGetLatest(sqlite3* DB, int accountId, int page) {
 		goto fail;
 
 	while(sqlite3_step(statement) == SQLITE_ROW) {
-		char* tmp_body = bsNewline2BR((char*)sqlite3_column_text(statement, 3));
+		Basic_string* tmp_body = Basic_string_init((const char*)sqlite3_column_text(statement, 3));
+		newline_to_br(tmp_body);
 
 		Posts* new_ps = Posts_new();
-		new_ps->p = postNew(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
-							sqlite3_column_int(statement, 2), tmp_body);
+		new_ps->p = postNew_move(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
+								 sqlite3_column_int(statement, 2), tmp_body);
 
 		List_insert_tail(&ps->list, &new_ps->list);
-		bsDel(tmp_body);
 	}
 
 fail:
@@ -146,13 +156,14 @@ Posts* postGetLatestGraph(sqlite3* DB, int accountId, int page) {
 		goto fail;
 
 	while(sqlite3_step(statement) == SQLITE_ROW) {
-		char* tmp_body = bsNewline2BR((char*)sqlite3_column_text(statement, 3));
+		Basic_string* tmp_body = Basic_string_init((const char*)sqlite3_column_text(statement, 3));
+		newline_to_br(tmp_body);
+
 		Posts* new_ps = Posts_new();
-		new_ps->p = postNew(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
-							sqlite3_column_int(statement, 2), tmp_body);
+		new_ps->p = postNew_move(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
+								 sqlite3_column_int(statement, 2), tmp_body);
 
 		List_insert_tail(&ps->list, &new_ps->list);
-		bsDel(tmp_body);
 	}
 
 fail:
@@ -164,7 +175,7 @@ void postDel(Post* post) {
 	if(!post)
 		return;
 
-	bsDel(post->body);
+	Basic_string_delete(post->body);
 	free(post);
 	post = NULL;
 }

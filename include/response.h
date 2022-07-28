@@ -1,6 +1,7 @@
 #ifndef RESPONSE_H
 #define RESPONSE_H
 
+#include "basic_string.h"
 #include "http/cookies.h"
 #include "list.h"
 
@@ -58,11 +59,8 @@ Response* responseNew();
 Response* responseNewRedirect(const char* location);
 void responseSetStatus(Response* r, Status);
 
-// ! This ctx is bs
-void responseSetBody_move(Response* restrict r, const char* restrict ctx);
-
-void responseSetBody_data(Response* restrict r, const void* restrict ctx, size_t len);
-void responseSetBody_data_move(Response* restrict r, void* restrict ctx, size_t len);
+void responseSetBody(Response* restrict r, const Basic_string* restrict ctx);
+void responseSetBody_move(Response* restrict r, Basic_string* restrict ctx);
 
 int response_get_status(const Response* r);
 

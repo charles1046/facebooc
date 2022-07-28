@@ -1,5 +1,6 @@
 #ifndef __UTILITY_H__
 #define __UTILITY_H__
+#include "basic_string.h"
 #include "pair.h"
 #include "string_view.h"
 
@@ -60,5 +61,19 @@ void to_lower_case(char* str);
 char* find_first_of(const char* str, const char* delim);
 
 SPair* make_pair(const struct string_view* const key, const struct string_view* const value);
+
+// Suppose ASLR is enabled
+int get_rand(void);
+
+Basic_string* gen_random_dummy_string(size_t len);
+
+// Transform "'&<> to encoded char
+// TODO: process more XSS issue
+void html_escape_trans(Basic_string* str);
+
+void newline_to_br(Basic_string* str);
+
+//! This function is not thread safe
+void sha256_string(char dst[65], const Basic_string* str);
 
 #endif
