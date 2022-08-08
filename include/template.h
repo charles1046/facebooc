@@ -6,11 +6,11 @@
 
 typedef struct Template Template;
 
-Template* templateNew(const char* filename);
-void templateDel(Template* t);
+Template *templateNew(const char *filename);
+void templateDel(Template *t);
 
 // Would overwrite the origin key-value pair
-void templateSet(Template* template, const char* key, const char* value);
-Basic_string* templateRender(const Template* t);
+void templateSet(Template *template, const char *key, const char *value);
+Basic_string *templateRender(const Template *t);
 
 #endif

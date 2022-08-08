@@ -5,9 +5,9 @@
 
 typedef struct Facebooc Facebooc;
 
-Facebooc* FB_new(const uint16_t port);
-int FB_run(Facebooc* s);
-void FB_delete(Facebooc* s);
+Facebooc *FB_new(const uint16_t port);
+int FB_run(Facebooc *s);
+void FB_delete(Facebooc *s);
 
 // You should add routing rules in facebooc_server.c
 

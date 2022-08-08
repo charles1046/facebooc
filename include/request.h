@@ -7,30 +7,30 @@
 #include "http/query.h"
 
 typedef enum Method {
-	OPTIONS,
-	GET,
-	HEAD,
-	POST,
-	PUT,
-	DELETE,
-	TRACE,
-	CONNECT,
-	UNKNOWN_METHOD
+    OPTIONS,
+    GET,
+    HEAD,
+    POST,
+    PUT,
+    DELETE,
+    TRACE,
+    CONNECT,
+    UNKNOWN_METHOD
 } Method;
 
 typedef struct Request {
-	const Method method;
+    const Method method;
 
-	const char* path;
-	const char* uri;
+    const char *path;
+    const char *uri;
 
-	const Query* queryString;
-	const Body* postBody;
-	const Cookies* cookies;
-	const Header* headers;
+    const Query *queryString;
+    const Body *postBody;
+    const Cookies *cookies;
+    const Header *headers;
 } Request;
 
-Request* requestNew(char*);
-void requestDel(Request*);
+Request *requestNew(char *);
+void requestDel(Request *);
 
 #endif

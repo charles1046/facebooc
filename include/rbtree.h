@@ -59,16 +59,16 @@ typedef struct rbnode_t rbnode_t;
  * The rbnode_t struct definition.
  */
 struct rbnode_t {
-	/** parent in rbtree, RBTREE_NULL for root */
-	rbnode_t* parent;
-	/** left node (smaller items) */
-	rbnode_t* left;
-	/** right node (larger items) */
-	rbnode_t* right;
-	/** pointer to sorting key */
-	const void* key;
-	/** colour of this node */
-	uint8_t color;
+    /** parent in rbtree, RBTREE_NULL for root */
+    rbnode_t *parent;
+    /** left node (smaller items) */
+    rbnode_t *left;
+    /** right node (larger items) */
+    rbnode_t *right;
+    /** pointer to sorting key */
+    const void *key;
+    /** colour of this node */
+    uint8_t color;
 };
 
 /** The nullpointer, points to empty node */
@@ -80,17 +80,17 @@ extern rbnode_t rbtree_null_node;
 typedef struct rbtree_t rbtree_t;
 /** definition for tree struct */
 struct rbtree_t {
-	/** The root of the red-black tree */
-	rbnode_t* root;
+    /** The root of the red-black tree */
+    rbnode_t *root;
 
-	/** The number of the nodes in the tree */
-	size_t count;
+    /** The number of the nodes in the tree */
+    size_t count;
 
-	/**
-	 * Key compare function. <0,0,>0 like strcmp.
-	 * Return 0 on two NULL ptrs.
-	 */
-	int (*cmp)(const void*, const void*);
+    /**
+     * Key compare function. <0,0,>0 like strcmp.
+     * Return 0 on two NULL ptrs.
+     */
+    int (*cmp)(const void *, const void *);
 };
 
 /**
@@ -98,14 +98,14 @@ struct rbtree_t {
  * @param cmpf: compare function (like strcmp) takes pointers to two keys.
  * @return: new tree, empty.
  */
-rbtree_t* rbtree_create(int (*cmpf)(const void*, const void*));
+rbtree_t *rbtree_create(int (*cmpf)(const void *, const void *));
 
 /**
  * Init a new tree (malloced by caller) with given key compare function.
  * @param rbtree: uninitialised memory for new tree, returned empty.
  * @param cmpf: compare function (like strcmp) takes pointers to two keys.
  */
-void rbtree_init(rbtree_t* rbtree, int (*cmpf)(const void*, const void*));
+void rbtree_init(rbtree_t *rbtree, int (*cmpf)(const void *, const void *));
 
 /**
  * Insert data into the tree.
@@ -113,7 +113,7 @@ void rbtree_init(rbtree_t* rbtree, int (*cmpf)(const void*, const void*));
  * @param data: element to insert.
  * @return: data ptr or NULL if key already present.
  */
-rbnode_t* rbtree_insert(rbtree_t* rbtree, rbnode_t* data);
+rbnode_t *rbtree_insert(rbtree_t *rbtree, rbnode_t *data);
 
 /**
  * Delete element from tree.
@@ -122,7 +122,7 @@ rbnode_t* rbtree_insert(rbtree_t* rbtree, rbnode_t* data);
  * @return: node that is now unlinked from the tree. User to delete it.
  * returns 0 if node not present
  */
-rbnode_t* rbtree_delete(rbtree_t* rbtree, const void* key);
+rbnode_t *rbtree_delete(rbtree_t *rbtree, const void *key);
 
 /**
  * Find key in tree. Returns NULL if not found.
@@ -130,7 +130,7 @@ rbnode_t* rbtree_delete(rbtree_t* rbtree, const void* key);
  * @param key: key that must match.
  * @return: node that fits or NULL.
  */
-rbnode_t* rbtree_search(const rbtree_t* rbtree, const void* key);
+rbnode_t *rbtree_search(const rbtree_t *rbtree, const void *key);
 
 /**
  * Find, but match does not have to be exact.
@@ -141,43 +141,46 @@ rbnode_t* rbtree_search(const rbtree_t* rbtree, const void* key);
  * @return: true if exact match in result. Else result points to <= element,
  * or NULL if key is smaller than the smallest key.
  */
-int rbtree_find_less_equal(const rbtree_t* rbtree, const void* key, rbnode_t** result);
+int rbtree_find_less_equal(const rbtree_t *rbtree,
+                           const void *key,
+                           rbnode_t **result);
 
 /**
  * Returns first (smallest) node in the tree
  * @param rbtree: tree
  * @return: smallest element or NULL if tree empty.
  */
-rbnode_t* rbtree_first(rbtree_t* rbtree);
+rbnode_t *rbtree_first(rbtree_t *rbtree);
 
 /**
  * Returns last (largest) node in the tree
  * @param rbtree: tree
  * @return: largest element or NULL if tree empty.
  */
-rbnode_t* rbtree_last(rbtree_t* rbtree);
+rbnode_t *rbtree_last(rbtree_t *rbtree);
 
 /**
  * Returns next larger node in the tree
  * @param rbtree: tree
  * @return: next larger element or NULL if no larger in tree.
  */
-rbnode_t* rbtree_next(rbnode_t* rbtree);
+rbnode_t *rbtree_next(rbnode_t *rbtree);
 
 /**
  * Returns previous smaller node in the tree
  * @param rbtree: tree
  * @return: previous smaller element or NULL if no previous in tree.
  */
-rbnode_t* rbtree_previous(rbnode_t* rbtree);
+rbnode_t *rbtree_previous(rbnode_t *rbtree);
 
 /**
  * Call with node=variable of struct* with rbnode_t as first element.
  * with type is the type of a pointer to that struct.
  */
-#define RBTREE_FOR(node, type, rbtree)                                      \
-	for(node = (type*)rbtree_first(rbtree); (rbnode_t*)node != RBTREE_NULL; \
-		node = (type*)rbtree_next((rbnode_t*)node))
+#define RBTREE_FOR(node, type, rbtree)         \
+    for (node = (type *) rbtree_first(rbtree); \
+         (rbnode_t *) node != RBTREE_NULL;     \
+         node = (type *) rbtree_next((rbnode_t *) node))
 
 /**
  * Call function for all elements in the redblack tree, such that
@@ -190,6 +193,8 @@ rbnode_t* rbtree_previous(rbnode_t* rbtree);
  * 	The function must not alter the rbtree.
  * @param arg: user argument.
  */
-void traverse_postorder(rbtree_t* tree, void (*func)(rbnode_t*, void*), void* arg);
+void traverse_postorder(rbtree_t *tree,
+                        void (*func)(rbnode_t *, void *),
+                        void *arg);
 
 #endif /* UTIL_RBTREE_H_ */

@@ -4,64 +4,71 @@
 #include <stdlib.h>
 #include <string.h>
 
-Basic_string* Basic_string_new() {
-	Basic_string* s = malloc(sizeof(Basic_string));
-	s->data = strdup("");
-	s->size = 0;
-	return s;
+Basic_string *Basic_string_new()
+{
+    Basic_string *s = malloc(sizeof(Basic_string));
+    s->data = strdup("");
+    s->size = 0;
+    return s;
 }
 
-Basic_string* Basic_string_init(const char* src) {
-	if(unlikely(!src))
-		return Basic_string_new();
+Basic_string *Basic_string_init(const char *src)
+{
+    if (unlikely(!src))
+        return Basic_string_new();
 
-	Basic_string* s = malloc(sizeof(Basic_string));
-	s->data = strdup(src);
-	s->size = strlen(src);
-	return s;
+    Basic_string *s = malloc(sizeof(Basic_string));
+    s->data = strdup(src);
+    s->size = strlen(src);
+    return s;
 }
 
-Basic_string* Basic_string_combine(const Basic_string* s1, const Basic_string* s2) {
-	Basic_string* s = malloc(sizeof(Basic_string));
+Basic_string *Basic_string_combine(const Basic_string *s1,
+                                   const Basic_string *s2)
+{
+    Basic_string *s = malloc(sizeof(Basic_string));
 
-	s->data = malloc(s1->size + s2->size + 1);
-	memcpy(s->data, s1->data, s1->size);
-	memcpy(s->data + s1->size, s2->data, s2->size);
-	s->data[s1->size + s2->size] = 0;
+    s->data = malloc(s1->size + s2->size + 1);
+    memcpy(s->data, s1->data, s1->size);
+    memcpy(s->data + s1->size, s2->data, s2->size);
+    s->data[s1->size + s2->size] = 0;
 
-	s->size = s1->size + s2->size;
-	return s;
+    s->size = s1->size + s2->size;
+    return s;
 }
 
-void Basic_string_append(Basic_string* dst, const Basic_string* src) {
-	if(unlikely(!src || !dst))
-		return;
+void Basic_string_append(Basic_string *dst, const Basic_string *src)
+{
+    if (unlikely(!src || !dst))
+        return;
 
-	dst->data = realloc(dst->data, dst->size + src->size + 1);
+    dst->data = realloc(dst->data, dst->size + src->size + 1);
 
-	memcpy(dst->data + dst->size, src->data, src->size);
+    memcpy(dst->data + dst->size, src->data, src->size);
 
-	dst->size += src->size;
-	dst->data[dst->size] = 0;
+    dst->size += src->size;
+    dst->data[dst->size] = 0;
 }
 
-void Basic_string_delete(Basic_string* str) {
-	if(unlikely(!str))
-		return;
+void Basic_string_delete(Basic_string *str)
+{
+    if (unlikely(!str))
+        return;
 
-	free(str->data);
-	free(str);
-	str = NULL;
+    free(str->data);
+    free(str);
+    str = NULL;
 }
 
-void Basic_string_append_raw(Basic_string* dst, const char* src) {
-	if(unlikely(!dst || !dst->data || !src || !*src))
-		return;
+void Basic_string_append_raw(Basic_string *dst, const char *src)
+{
+    if (unlikely(!dst || !dst->data || !src || !*src))
+        return;
 
-	size_t len = strlen(src);
-	dst->data = realloc(dst->data, dst->size + len + 1);
-	strncpy(dst->data + dst->size, src, len);
-	dst->size += len;
+    size_t len = strlen(src);
+    dst->data = realloc(dst->data, dst->size + len + 1);
+    strncpy(dst->data + dst->size, src, len);
+    dst->size += len;
 
-	dst->data[dst->size] = 0;
+    dst->data[dst->size] = 0;
 }

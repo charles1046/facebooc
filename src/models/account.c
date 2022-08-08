@@ -1,378 +1,425 @@
 #include <stdio.h>
 #include <time.h>
 
+#include <string.h>
 #include "base64.h"
 #include "models/account.h"
 #include "models/session.h"
 #include "utility.h"
-#include <string.h>
 
 // We stores "encoded" data into database
 
 // The db stores the encoded data, therefore we should decode it
-static inline Account* new_Account_from_db__(int id, int createAt, const char* name,
-											 const char* email, const char* username);
+static inline Account *new_Account_from_db__(int id,
+                                             int createAt,
+                                             const char *name,
+                                             const char *email,
+                                             const char *username);
 
 // A constructor of "Accounts", which is a list of Account
-static inline Accounts* Accounts_new(void);
+static inline Accounts *Accounts_new(void);
 
-Account* accountNew(int id, int createdAt, const char* name, const char* email,
-					const char* username) {
-	Account* account = malloc(sizeof(Account));
+Account *accountNew(int id,
+                    int createdAt,
+                    const char *name,
+                    const char *email,
+                    const char *username)
+{
+    Account *account = malloc(sizeof(Account));
 
-	account->id = id;
-	account->createdAt = createdAt;
-	account->name = Basic_string_init(name);
-	account->email = Basic_string_init(email);
-	account->username = Basic_string_init(username);
+    account->id = id;
+    account->createdAt = createdAt;
+    account->name = Basic_string_init(name);
+    account->email = Basic_string_init(email);
+    account->username = Basic_string_init(username);
 
-	return account;
+    return account;
 }
 
-Account* accountNew_move(int id, int createdAt, Basic_string* name, Basic_string* email,
-						 Basic_string* username) {
+Account *accountNew_move(int id,
+                         int createdAt,
+                         Basic_string *name,
+                         Basic_string *email,
+                         Basic_string *username)
+{
+    Account *account = malloc(sizeof(Account));
 
-	Account* account = malloc(sizeof(Account));
+    account->id = id;
+    account->createdAt = createdAt;
+    account->name = name;
+    account->email = email;
+    account->username = username;
 
-	account->id = id;
-	account->createdAt = createdAt;
-	account->name = name;
-	account->email = email;
-	account->username = username;
+    name = email = username = NULL;
 
-	name = email = username = NULL;
-
-	return account;
+    return account;
 }
 
-Account* accountGetById(sqlite3* DB, int id) {
-	Account* account = NULL;
-	if(id == -1)
-		return NULL;
+Account *accountGetById(sqlite3 *DB, int id)
+{
+    Account *account = NULL;
+    if (id == -1)
+        return NULL;
 
-	sqlite3_stmt* statement = NULL;
-	if(sqlite3_prepare_v2(DB,
-						  "SELECT createdAt, name, email, username"
-						  "  FROM accounts"
-						  " WHERE id = ?",
-						  -1, &statement, NULL)
-	   != SQLITE_OK)
-		return NULL;
+    sqlite3_stmt *statement = NULL;
+    if (sqlite3_prepare_v2(DB,
+                           "SELECT createdAt, name, email, username"
+                           "  FROM accounts"
+                           " WHERE id = ?",
+                           -1, &statement, NULL) != SQLITE_OK)
+        return NULL;
 
-	if(sqlite3_bind_int(statement, 1, id) != SQLITE_OK)
-		goto clean;
-	if(sqlite3_step(statement) != SQLITE_ROW)
-		goto clean;
+    if (sqlite3_bind_int(statement, 1, id) != SQLITE_OK)
+        goto clean;
+    if (sqlite3_step(statement) != SQLITE_ROW)
+        goto clean;
 
-	account = new_Account_from_db__(id, sqlite3_column_int(statement, 0),
-									(const char*)sqlite3_column_text(statement, 1),
-									(const char*)sqlite3_column_text(statement, 2),
-									(const char*)sqlite3_column_text(statement, 3));
+    account =
+        new_Account_from_db__(id, sqlite3_column_int(statement, 0),
+                              (const char *) sqlite3_column_text(statement, 1),
+                              (const char *) sqlite3_column_text(statement, 2),
+                              (const char *) sqlite3_column_text(statement, 3));
 
 clean:
-	sqlite3_finalize(statement);
-	return account;
+    sqlite3_finalize(statement);
+    return account;
 }
 
-Account* accountCreate(sqlite3* DB, const Basic_string* name, const Basic_string* email,
-					   const Basic_string* username, const Basic_string* password) {
+Account *accountCreate(sqlite3 *DB,
+                       const Basic_string *name,
+                       const Basic_string *email,
+                       const Basic_string *username,
+                       const Basic_string *password)
+{
+    Account *account = NULL;
+    sqlite3_stmt *statement;
+    int rc = sqlite3_prepare_v2(
+        DB,
+        "INSERT INTO accounts(createdAt, name, email, username, password)"
+        "     VALUES         (        ?,    ?,     ?,        ?,        ?)",
+        -1, &statement, NULL);
 
-	Account* account = NULL;
-	sqlite3_stmt* statement;
-	int rc = sqlite3_prepare_v2(DB,
-								"INSERT INTO accounts(createdAt, name, email, username, password)"
-								"     VALUES         (        ?,    ?,     ?,        ?,        ?)",
-								-1, &statement, NULL);
+    if (rc != SQLITE_OK)
+        return NULL;
 
-	if(rc != SQLITE_OK)
-		return NULL;
+    Basic_string *name_encoded = base64_encode(name->data, name->size);
+    Basic_string *email_encoded = base64_encode(email->data, email->size);
+    Basic_string *username_encoded =
+        base64_encode(username->data, username->size);
 
-	Basic_string* name_encoded = base64_encode(name->data, name->size);
-	Basic_string* email_encoded = base64_encode(email->data, email->size);
-	Basic_string* username_encoded = base64_encode(username->data, username->size);
+    char hashed_pw[65];
+    sha256_string(hashed_pw, password);
 
-	char hashed_pw[65];
-	sha256_string(hashed_pw, password);
+    if (sqlite3_bind_int(statement, 1, time(NULL)) != SQLITE_OK)
+        goto ret;
+    if (sqlite3_bind_text(statement, 2, name_encoded->data, -1, NULL) !=
+        SQLITE_OK)
+        goto name_encoded_dtor;
+    if (sqlite3_bind_text(statement, 3, email_encoded->data, -1, NULL) !=
+        SQLITE_OK)
+        goto email_encoded_dtor;
+    if (sqlite3_bind_text(statement, 4, username_encoded->data, -1, NULL) !=
+        SQLITE_OK)
+        goto username_encoded_dtor;
+    if (sqlite3_bind_text(statement, 5, hashed_pw, -1, NULL) != SQLITE_OK)
+        goto fail;
 
-	if(sqlite3_bind_int(statement, 1, time(NULL)) != SQLITE_OK)
-		goto ret;
-	if(sqlite3_bind_text(statement, 2, name_encoded->data, -1, NULL) != SQLITE_OK)
-		goto name_encoded_dtor;
-	if(sqlite3_bind_text(statement, 3, email_encoded->data, -1, NULL) != SQLITE_OK)
-		goto email_encoded_dtor;
-	if(sqlite3_bind_text(statement, 4, username_encoded->data, -1, NULL) != SQLITE_OK)
-		goto username_encoded_dtor;
-	if(sqlite3_bind_text(statement, 5, hashed_pw, -1, NULL) != SQLITE_OK)
-		goto fail;
-
-	if(sqlite3_step(statement) == SQLITE_DONE)
-		account = accountGetByEmail(DB, email);	 // id will generated by SQLite
+    if (sqlite3_step(statement) == SQLITE_DONE)
+        account = accountGetByEmail(DB, email);  // id will generated by SQLite
 
 fail:
 username_encoded_dtor:
-	Basic_string_delete(username_encoded);
+    Basic_string_delete(username_encoded);
 
 email_encoded_dtor:
-	Basic_string_delete(email_encoded);
+    Basic_string_delete(email_encoded);
 
 name_encoded_dtor:
-	Basic_string_delete(name_encoded);
+    Basic_string_delete(name_encoded);
 
 ret:
-	sqlite3_finalize(statement);
-	return account;
+    sqlite3_finalize(statement);
+    return account;
 }
 
-Account* accountGetByEmail(sqlite3* DB, const Basic_string* email) {
-	if(!email)
-		return NULL;
+Account *accountGetByEmail(sqlite3 *DB, const Basic_string *email)
+{
+    if (!email)
+        return NULL;
 
-	Account* account = NULL;
-	sqlite3_stmt* statement;
+    Account *account = NULL;
+    sqlite3_stmt *statement;
 
-	if(sqlite3_prepare_v2(DB,
-						  "SELECT id, createdAt, name, email, username"
-						  "  FROM accounts"
-						  " WHERE email = ?",
-						  -1, &statement, NULL)
-	   != SQLITE_OK) {
-		return NULL;
-	}
+    if (sqlite3_prepare_v2(DB,
+                           "SELECT id, createdAt, name, email, username"
+                           "  FROM accounts"
+                           " WHERE email = ?",
+                           -1, &statement, NULL) != SQLITE_OK) {
+        return NULL;
+    }
 
-	Basic_string* email_encoded = base64_encode(email->data, email->size);
+    Basic_string *email_encoded = base64_encode(email->data, email->size);
 
-	if(sqlite3_bind_text(statement, 1, email_encoded->data, -1, NULL) != SQLITE_OK)
-		goto fail;
-	if(sqlite3_step(statement) != SQLITE_ROW)
-		goto fail;
+    if (sqlite3_bind_text(statement, 1, email_encoded->data, -1, NULL) !=
+        SQLITE_OK)
+        goto fail;
+    if (sqlite3_step(statement) != SQLITE_ROW)
+        goto fail;
 
-	account =
-		new_Account_from_db__(sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
-							  (const char*)sqlite3_column_text(statement, 2),
-							  (const char*)sqlite3_column_text(statement, 3),
-							  (const char*)sqlite3_column_text(statement, 4));
+    account = new_Account_from_db__(
+        sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
+        (const char *) sqlite3_column_text(statement, 2),
+        (const char *) sqlite3_column_text(statement, 3),
+        (const char *) sqlite3_column_text(statement, 4));
 fail:
-	Basic_string_delete(email_encoded);
-	sqlite3_finalize(statement);
-	return account;
+    Basic_string_delete(email_encoded);
+    sqlite3_finalize(statement);
+    return account;
 }
 
-Account* accountGetBySId(sqlite3* DB, const Basic_string* sid) {
-	// TODO: Add some random seeds here
-	if(!sid)
-		return NULL;
+Account *accountGetBySId(sqlite3 *DB, const Basic_string *sid)
+{
+    // TODO: Add some random seeds here
+    if (!sid)
+        return NULL;
 
-	Session* session = sessionGetBySId(DB, sid->data);
-	if(!session)
-		return NULL;
+    Session *session = sessionGetBySId(DB, sid->data);
+    if (!session)
+        return NULL;
 
-	Account* account = NULL;
-	sqlite3_stmt* statement = NULL;
-	if(sqlite3_prepare_v2(DB,
-						  "SELECT createdAt, name, email, username"
-						  "  FROM accounts"
-						  " WHERE id = ?",
-						  -1, &statement, NULL)
-	   != SQLITE_OK) {
-		return NULL;
-	}
+    Account *account = NULL;
+    sqlite3_stmt *statement = NULL;
+    if (sqlite3_prepare_v2(DB,
+                           "SELECT createdAt, name, email, username"
+                           "  FROM accounts"
+                           " WHERE id = ?",
+                           -1, &statement, NULL) != SQLITE_OK) {
+        return NULL;
+    }
 
-	if(sqlite3_bind_int(statement, 1, session->accountId) != SQLITE_OK)
-		goto fail;
-	if(sqlite3_step(statement) != SQLITE_ROW)
-		goto fail;
+    if (sqlite3_bind_int(statement, 1, session->accountId) != SQLITE_OK)
+        goto fail;
+    if (sqlite3_step(statement) != SQLITE_ROW)
+        goto fail;
 
-	account = new_Account_from_db__(session->accountId, sqlite3_column_int(statement, 0),
-									(const char*)sqlite3_column_text(statement, 1),
-									(const char*)sqlite3_column_text(statement, 2),
-									(const char*)sqlite3_column_text(statement, 3));
+    account = new_Account_from_db__(
+        session->accountId, sqlite3_column_int(statement, 0),
+        (const char *) sqlite3_column_text(statement, 1),
+        (const char *) sqlite3_column_text(statement, 2),
+        (const char *) sqlite3_column_text(statement, 3));
 
 fail:
-	sessionDel(session);
-	sqlite3_finalize(statement);
-	return account;
+    sessionDel(session);
+    sqlite3_finalize(statement);
+    return account;
 }
 
-Accounts* accountSearch(sqlite3* DB, const Basic_string* query, int page) {
-	if(!query)
-		return NULL;
+Accounts *accountSearch(sqlite3 *DB, const Basic_string *query, int page)
+{
+    if (!query)
+        return NULL;
 
-	Accounts* accounts = Accounts_new();
-	sqlite3_stmt* statement = NULL;
+    Accounts *accounts = Accounts_new();
+    sqlite3_stmt *statement = NULL;
 
-	int rc = sqlite3_prepare_v2(DB,
-								"SELECT id, createdAt, name, email, username"
-								"  FROM accounts"
-								" WHERE name     LIKE '%' || ? || '%'"
-								"    OR email    LIKE '%' || ? || '%'"
-								"    OR username LIKE '%' || ? || '%'"
-								" ORDER BY createdAt DESC"
-								" LIMIT 10 "
-								"OFFSET ?",
-								-1, &statement, NULL);
+    int rc = sqlite3_prepare_v2(DB,
+                                "SELECT id, createdAt, name, email, username"
+                                "  FROM accounts"
+                                " WHERE name     LIKE '%' || ? || '%'"
+                                "    OR email    LIKE '%' || ? || '%'"
+                                "    OR username LIKE '%' || ? || '%'"
+                                " ORDER BY createdAt DESC"
+                                " LIMIT 10 "
+                                "OFFSET ?",
+                                -1, &statement, NULL);
 
-	if(rc != SQLITE_OK)
-		goto ret;
+    if (rc != SQLITE_OK)
+        goto ret;
 
-	Basic_string* query_encode = base64_encode(query->data, query->size);
+    Basic_string *query_encode = base64_encode(query->data, query->size);
 
-	if(sqlite3_bind_text(statement, 1, query_encode->data, -1, NULL) != SQLITE_OK)
-		goto fail;
-	if(sqlite3_bind_text(statement, 2, query_encode->data, -1, NULL) != SQLITE_OK)
-		goto fail;
-	if(sqlite3_bind_text(statement, 3, query_encode->data, -1, NULL) != SQLITE_OK)
-		goto fail;
-	if(sqlite3_bind_int(statement, 4, page * 10) != SQLITE_OK)
-		goto fail;
+    if (sqlite3_bind_text(statement, 1, query_encode->data, -1, NULL) !=
+        SQLITE_OK)
+        goto fail;
+    if (sqlite3_bind_text(statement, 2, query_encode->data, -1, NULL) !=
+        SQLITE_OK)
+        goto fail;
+    if (sqlite3_bind_text(statement, 3, query_encode->data, -1, NULL) !=
+        SQLITE_OK)
+        goto fail;
+    if (sqlite3_bind_int(statement, 4, page * 10) != SQLITE_OK)
+        goto fail;
 
-	while(sqlite3_step(statement) == SQLITE_ROW) {
-		Account* account = new_Account_from_db__(sqlite3_column_int(statement, 0),
-												 sqlite3_column_int(statement, 1),
-												 (const char*)sqlite3_column_text(statement, 2),
-												 (const char*)sqlite3_column_text(statement, 3),
-												 (const char*)sqlite3_column_text(statement, 4));
+    while (sqlite3_step(statement) == SQLITE_ROW) {
+        Account *account = new_Account_from_db__(
+            sqlite3_column_int(statement, 0), sqlite3_column_int(statement, 1),
+            (const char *) sqlite3_column_text(statement, 2),
+            (const char *) sqlite3_column_text(statement, 3),
+            (const char *) sqlite3_column_text(statement, 4));
 
-		Accounts* new_accounts = Accounts_new();
-		new_accounts->a = account;
-		List_insert_tail(&accounts->list, &new_accounts->list);
-	}
+        Accounts *new_accounts = Accounts_new();
+        new_accounts->a = account;
+        List_insert_tail(&accounts->list, &new_accounts->list);
+    }
 
-	Basic_string_delete(query_encode);
+    Basic_string_delete(query_encode);
 
 fail:
-	sqlite3_finalize(statement);
+    sqlite3_finalize(statement);
 
 ret:
-	return accounts;
+    return accounts;
 }
 
-bool accountCheckUsername(sqlite3* DB, const Basic_string* username) {
-	sqlite3_stmt* statement = NULL;
+bool accountCheckUsername(sqlite3 *DB, const Basic_string *username)
+{
+    sqlite3_stmt *statement = NULL;
 
-	if(sqlite3_prepare_v2(DB, "SELECT id FROM accounts WHERE username = ?", -1, &statement, NULL)
-	   != SQLITE_OK)
-		return false;
+    if (sqlite3_prepare_v2(DB, "SELECT id FROM accounts WHERE username = ?", -1,
+                           &statement, NULL) != SQLITE_OK)
+        return false;
 
-	const Basic_string* username_encoded = base64_encode(username->data, username->size);
+    const Basic_string *username_encoded =
+        base64_encode(username->data, username->size);
 
-	if(sqlite3_bind_text(statement, 1, username_encoded->data, -1, NULL) != SQLITE_OK)
-		goto failed;
+    if (sqlite3_bind_text(statement, 1, username_encoded->data, -1, NULL) !=
+        SQLITE_OK)
+        goto failed;
 
-	bool res = sqlite3_step(statement) != SQLITE_ROW;
+    bool res = sqlite3_step(statement) != SQLITE_ROW;
 
 failed:
-	Basic_string_delete((Basic_string*)username_encoded);
-	sqlite3_finalize(statement);
+    Basic_string_delete((Basic_string *) username_encoded);
+    sqlite3_finalize(statement);
 
-	return res;
+    return res;
 }
 
-bool accountCheckEmail(sqlite3* DB, const Basic_string* email) {
-	sqlite3_stmt* statement = NULL;
+bool accountCheckEmail(sqlite3 *DB, const Basic_string *email)
+{
+    sqlite3_stmt *statement = NULL;
 
-	if(sqlite3_prepare_v2(DB, "SELECT id FROM accounts WHERE email = ?", -1, &statement, NULL)
-	   != SQLITE_OK)
-		return false;
+    if (sqlite3_prepare_v2(DB, "SELECT id FROM accounts WHERE email = ?", -1,
+                           &statement, NULL) != SQLITE_OK)
+        return false;
 
-	const Basic_string* email_encoded = base64_encode(email->data, email->size);
+    const Basic_string *email_encoded = base64_encode(email->data, email->size);
 
-	if(sqlite3_bind_text(statement, 1, email_encoded->data, -1, NULL) != SQLITE_OK)
-		goto failed;
+    if (sqlite3_bind_text(statement, 1, email_encoded->data, -1, NULL) !=
+        SQLITE_OK)
+        goto failed;
 
-	bool res = sqlite3_step(statement) != SQLITE_ROW;
+    bool res = sqlite3_step(statement) != SQLITE_ROW;
 
 failed:
-	Basic_string_delete((Basic_string*)email_encoded);
-	sqlite3_finalize(statement);
+    Basic_string_delete((Basic_string *) email_encoded);
+    sqlite3_finalize(statement);
 
-	return res;
+    return res;
 }
 
-void accountDel(Account* account) {
-	if(unlikely(account == NULL))
-		return;
-	Basic_string_delete(account->name);
-	Basic_string_delete(account->email);
-	Basic_string_delete(account->username);
-	free(account);
+void accountDel(Account *account)
+{
+    if (unlikely(account == NULL))
+        return;
+    Basic_string_delete(account->name);
+    Basic_string_delete(account->email);
+    Basic_string_delete(account->username);
+    free(account);
 
-	account = NULL;
+    account = NULL;
 }
 
-bool account_auth(sqlite3* DB, const Basic_string* username, const Basic_string* password) {
-	if(unlikely(!username || !password))
-		return false;
+bool account_auth(sqlite3 *DB,
+                  const Basic_string *username,
+                  const Basic_string *password)
+{
+    if (unlikely(!username || !password))
+        return false;
 
-	sqlite3_stmt* statement = NULL;
-	if(sqlite3_prepare_v2(DB, "SELECT password FROM accounts WHERE username = ?", -1, &statement,
-						  NULL)
-	   != SQLITE_OK)
-		return false;
+    sqlite3_stmt *statement = NULL;
+    if (sqlite3_prepare_v2(DB,
+                           "SELECT password FROM accounts WHERE username = ?",
+                           -1, &statement, NULL) != SQLITE_OK)
+        return false;
 
-	const Basic_string* username_encoded = base64_encode(username->data, username->size);
+    const Basic_string *username_encoded =
+        base64_encode(username->data, username->size);
 
-	if(sqlite3_bind_text(statement, 1, username_encoded->data, -1, NULL) != SQLITE_OK)
-		goto failed;
+    if (sqlite3_bind_text(statement, 1, username_encoded->data, -1, NULL) !=
+        SQLITE_OK)
+        goto failed;
 
-	sqlite3_step(statement);
+    sqlite3_step(statement);
 
-	const char* stored_hash = (const char*)sqlite3_column_text(statement, 0);
-	if(stored_hash == NULL)
-		goto failed;
+    const char *stored_hash = (const char *) sqlite3_column_text(statement, 0);
+    if (stored_hash == NULL)
+        goto failed;
 
-	char hashed_from_user[65];
-	sha256_string(hashed_from_user, password);
+    char hashed_from_user[65];
+    sha256_string(hashed_from_user, password);
 
-	bool res = !strncmp(hashed_from_user, stored_hash, ARR_LEN(hashed_from_user));
+    bool res =
+        !strncmp(hashed_from_user, stored_hash, ARR_LEN(hashed_from_user));
 
 failed:
-	Basic_string_delete((Basic_string*)username_encoded);
-	sqlite3_finalize(statement);
-	return res;
+    Basic_string_delete((Basic_string *) username_encoded);
+    sqlite3_finalize(statement);
+    return res;
 }
 
-static inline Accounts* Accounts_new(void) {
-	Accounts* a = malloc(sizeof(Accounts));
-	a->a = NULL;
-	List_ctor(&a->list);
+static inline Accounts *Accounts_new(void)
+{
+    Accounts *a = malloc(sizeof(Accounts));
+    a->a = NULL;
+    List_ctor(&a->list);
 
-	return a;
+    return a;
 }
 
-void accounts_delete(Accounts* as) {
-	if(unlikely(!as))
-		return;
+void accounts_delete(Accounts *as)
+{
+    if (unlikely(!as))
+        return;
 
-	List *node = NULL, *safe = NULL;
-	list_for_each_safe(node, safe, &as->list) {
-		Accounts* as_node = container_of(node, Accounts, list);
-		accountDel(as_node->a);
-		free(as_node);
-	}
+    List *node = NULL, *safe = NULL;
+    list_for_each_safe(node, safe, &as->list)
+    {
+        Accounts *as_node = container_of(node, Accounts, list);
+        accountDel(as_node->a);
+        free(as_node);
+    }
 
-	// Delete head, which is an empty node
-	accountDel(as->a);
-	free(as);
-	as = NULL;
+    // Delete head, which is an empty node
+    accountDel(as->a);
+    free(as);
+    as = NULL;
 }
 
-int accounts_is_empty(const Accounts* as) {
-	return List_is_empty(&as->list);
+int accounts_is_empty(const Accounts *as)
+{
+    return List_is_empty(&as->list);
 }
 
-#define LOCAL_BASIC_STRING(src) \
-	{ .data = (char*)(src), .size = strlen(src) }
+#define LOCAL_BASIC_STRING(src)                     \
+    {                                               \
+        .data = (char *) (src), .size = strlen(src) \
+    }
 
-static inline Account* new_Account_from_db__(int id, int createAt, const char* name,
-											 const char* email, const char* username) {
+static inline Account *new_Account_from_db__(int id,
+                                             int createAt,
+                                             const char *name,
+                                             const char *email,
+                                             const char *username)
+{
+    // Never free this
+    Basic_string name__ = LOCAL_BASIC_STRING(name);
+    Basic_string email__ = LOCAL_BASIC_STRING(email);
+    Basic_string username__ = LOCAL_BASIC_STRING(username);
 
-	// Never free this
-	Basic_string name__ = LOCAL_BASIC_STRING(name);
-	Basic_string email__ = LOCAL_BASIC_STRING(email);
-	Basic_string username__ = LOCAL_BASIC_STRING(username);
+    Account *a = accountNew_move(id, createAt, base64_decode2str(&name__),
+                                 base64_decode2str(&email__),
+                                 base64_decode2str(&username__));
 
-	Account* a = accountNew_move(id, createAt, base64_decode2str(&name__),
-								 base64_decode2str(&email__), base64_decode2str(&username__));
-
-	return a;
+    return a;
 }

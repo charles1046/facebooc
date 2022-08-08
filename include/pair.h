@@ -8,35 +8,36 @@ typedef struct SPair SPair;
 typedef struct SSPair SSPair;
 
 struct Pair {
-	uint64_t key;
-	void* value;
+    uint64_t key;
+    void *value;
 };
 
 struct PPair {
-	void* key;
-	void* value;
+    void *key;
+    void *value;
 };
 
 // String pair, string as the key
 // The key is immutable
 struct SPair {
-	char* key;
-	void* value;
+    char *key;
+    void *value;
 };
 
 struct SSPair {
-	char* key;
-	char* value;
+    char *key;
+    char *value;
 };
 
-void Pair_delete(Pair* p);
-void PPair_delete(PPair* p);
-void SPair_delete(SPair* p);
-void SSPair_delete(SSPair* p);
+void Pair_delete(Pair *p);
+void PPair_delete(PPair *p);
+void SPair_delete(SPair *p);
+void SSPair_delete(SSPair *p);
 
 #define eXpire_pair(key_, value_, type) \
-	&(type) {                           \
-		.key = key_, .value = value_    \
-	}
+    &(type)                             \
+    {                                   \
+        .key = key_, .value = value_    \
+    }
 
 #endif
