@@ -13,7 +13,7 @@ sudo apt-get install sassc    \
 ````
 
 # Prerequisites
-Install SQLite development package:
+Install SQLite and openssl development package:
 ```bash
 sudo apt-get install libsqlite3-dev libssl-dev
 ```
@@ -26,6 +26,6 @@ make run
 
 Licensing
 ---------
-`Facebooc` is freely redistributable under the two-clause BSD License.
-Use of this source code is governed by a BSD-style license that can be found
+`Facebooc` is freely re-distributable under the Apache & BSD License.
+Use of this source code is governed by Apache & BSD style license that can be found
 in the `LICENSE` file.

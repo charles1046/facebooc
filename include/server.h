@@ -6,7 +6,7 @@
 #include "request.h"
 #include "response.h"
 typedef struct Server Server;
-typedef Response *(*Handler)(Request *);
+typedef Response *(*Handler)(const Request *);
 
 struct Server {
     unsigned int port;
