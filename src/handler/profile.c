@@ -1,4 +1,4 @@
-#include "handler/profile.h"
+#include "profile.h"
 
 #include "db.h"
 #include "helper.h"

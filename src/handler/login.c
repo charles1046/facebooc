@@ -9,7 +9,7 @@
 Response *login(const Request *req)
 {
     const Account *my_acc = get_account(req->cookies);
-    if (unlikely(my_acc != NULL)) {  // It's not usually logined
+    if (unlikely(my_acc != NULL)) {  // It's not usually logged in
         accountDel((Account *) my_acc);
         return responseNewRedirect("/dashboard/");
     }

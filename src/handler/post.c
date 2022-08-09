@@ -1,4 +1,4 @@
-#include "handler/post.h"
+#include "post.h"
 #include "db.h"
 #include "helper.h"
 

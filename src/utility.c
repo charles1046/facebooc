@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <openssl/evp.h>
 #include <openssl/sha.h>
 
 static inline void badCharHeuristic(const char *str,
@@ -261,11 +262,9 @@ void newline_to_br(Basic_string *str)
 
 void sha256_string(char dst[65], const Basic_string *str)
 {
+    // ‘SHA256_Init’ is deprecated: Since OpenSSL 3.0
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, str->data, str->size);
-    SHA256_Final(hash, &sha256);
+    EVP_Digest(str->data, str->size, hash, NULL, EVP_sha256(), NULL);
 
     // hash stores the raw hash value, we should transfer to literal string for
     // comparing

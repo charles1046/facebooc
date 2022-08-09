@@ -1,4 +1,4 @@
-#include "handler/search.h"
+#include "search.h"
 #include "helper.h"
 
 #include "db.h"

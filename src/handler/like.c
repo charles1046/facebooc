@@ -1,4 +1,4 @@
-#include "handler/like.h"
+#include "like.h"
 #include "db.h"
 #include "helper.h"
 
