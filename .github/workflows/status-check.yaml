@@ -4,14 +4,14 @@ on: [push, pull_request]
 
 jobs:
   Validate:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: checkout code
         uses: actions/checkout@v2
       - name: Validate coding style and functionality
         run: |
             sudo apt-get update
-            sudo apt-get install -q -y clang-format-11 gcc-10 cppcheck python3 build-essential
+            sudo apt-get install -q -y clang-format-14 gcc cppcheck python3 build-essential libssl-dev
             .ci/check-status.sh || exit 1
       - name: make test
         run: |
