@@ -3,12 +3,16 @@
 #include "helper.h"
 #include "template.h"
 
-
 #include "models/like.h"
 #include "models/post.h"
 
 #include <stdio.h>
 #include <time.h>
+
+static inline Basic_string *concat_posts(const Posts *ps,
+                                         const Account *my_acc);
+static inline Template *gen_template(const Basic_string *ctx,
+                                     const Account *my_acc);
 
 Response *dashboard(const Request *req)
 {
@@ -17,11 +21,29 @@ Response *dashboard(const Request *req)
         return NULL;
 
     Posts *posts = postGetLatestGraph(get_db(), my_acc->id, 0);
+    const Basic_string *ctx = concat_posts(posts, my_acc);
+    Posts_delete(posts);
+
+    Response *response = responseNew();
+    responseSetStatus(response, OK);
+
+    Template *template = gen_template(ctx, my_acc);
+    responseSetBody_move(response, templateRender(template));
+    templateDel(template);
+
+    Basic_string_delete(ctx);
+    accountDel((Account *) my_acc);
+    return response;
+}
+
+static inline Basic_string *concat_posts(const Posts *posts,
+                                         const Account *my_acc)
+{
+    if (Posts_is_empty(posts))
+        return NULL;
 
     // A flexible string containing the returning posts' context
-    Basic_string *ctx = NULL;
-    if (!Posts_is_empty(posts))
-        ctx = Basic_string_init("<ul class=\"posts\">");
+    Basic_string *ctx = Basic_string_init("<ul class=\"posts\">");
 
     List *cur = NULL;
     list_for_each(cur, &posts->list)
@@ -71,28 +93,27 @@ Response *dashboard(const Request *req)
         Basic_string_append_raw(ctx, sbuff);
         Basic_string_append_raw(ctx, "</li>");
     }
-    Posts_delete(posts);
+    Basic_string_append_raw(ctx, "</ul>");
 
+    return ctx;
+}
+
+static inline Template *gen_template(const Basic_string *ctx,
+                                     const Account *my_acc)
+{
     Template *template = templateNew("templates/dashboard.html");
     if (ctx) {
-        Basic_string_append_raw(ctx, "</ul>");
         templateSet(template, "graph", ctx->data);
     } else {
         templateSet(template, "graph",
                     "<ul class=\"posts\"><div class=\"not-found\">Nothing "
                     "here.</div></ul>");
     }
-    Basic_string_delete(ctx);
 
     templateSet(template, "active", "dashboard");
     templateSet(template, "loggedIn", "t");
     templateSet(template, "subtitle", "Dashboard");
     templateSet(template, "accountName", my_acc->name->data);
 
-    Response *response = responseNew();
-    responseSetStatus(response, OK);
-    responseSetBody_move(response, templateRender(template));
-    templateDel(template);
-    accountDel((Account *) my_acc);
-    return response;
+    return template;
 }
