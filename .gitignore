@@ -9,3 +9,6 @@ deploy_updater/.env
 templates/version.html
 .idea
 static/css/
+compile_commands.json
+.cache/
+build/
