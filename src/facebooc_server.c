@@ -30,6 +30,7 @@ struct __HANDLER_TABLE__ {
     register_handler_same_name(dashboard),
     register_handler("", home),
     register_handler_same_name(like),
+    register_handler_same_name(unlike),
     register_handler_same_name(login),
     register_handler_same_name(logout),
     register_handler_same_name(post),
