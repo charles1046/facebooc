@@ -154,13 +154,13 @@ void requestDel(Request *req)
 
     free((char *) req->path);
 
-    query_delete((Query *) req->queryString);
+    query_delete(req->queryString);
 
-    body_delete((Body *) req->postBody);
+    body_delete(req->postBody);
 
-    header_delete((Header *) req->headers);
+    header_delete(req->headers);
 
-    Cookies_delete((Cookies *) req->cookies);
+    Cookies_delete(req->cookies);
 
     free(req);
 }

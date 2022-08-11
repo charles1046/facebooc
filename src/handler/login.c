@@ -42,8 +42,8 @@ Response *login(const Request *req)
             Session *session =
                 sessionCreate(get_db(), username->data, password->data);
             // Username and password are no longer to use
-            Basic_string_delete((Basic_string *) username);
-            Basic_string_delete((Basic_string *) password);
+            Basic_string_delete(username);
+            Basic_string_delete(password);
 
             if (session) {
                 char expire_string[64];
@@ -70,8 +70,8 @@ Response *login(const Request *req)
             invalid(template, "usernameError", "Invalid username or password.");
         }
 
-        Basic_string_delete((Basic_string *) username);
-        Basic_string_delete((Basic_string *) password);
+        Basic_string_delete(username);
+        Basic_string_delete(password);
     }
 
     responseSetBody_move(response, templateRender(template));

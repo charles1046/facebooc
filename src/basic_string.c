@@ -50,6 +50,10 @@ void Basic_string_append(Basic_string *dst, const Basic_string *src)
     dst->data[dst->size] = 0;
 }
 
+#ifdef Basic_string_delete
+#undef Basic_string_delete
+#endif
+
 void Basic_string_delete(Basic_string *str)
 {
     if (unlikely(!str))
@@ -58,6 +62,11 @@ void Basic_string_delete(Basic_string *str)
     free(str->data);
     free(str);
     str = NULL;
+}
+
+void Basic_string_delete_const(const Basic_string *str)
+{
+    Basic_string_delete((Basic_string *) str);
 }
 
 void Basic_string_append_raw(Basic_string *dst, const char *src)

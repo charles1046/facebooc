@@ -185,6 +185,10 @@ Cookie *Cookies_get(const Cookies *c, const char *key)
     return NULL;
 }
 
+#ifdef Cookies_delete
+#undef Cookies_delete
+#endif
+
 void Cookies_delete(Cookies *c)
 {
     if (unlikely(!c))
@@ -201,6 +205,11 @@ void Cookies_delete(Cookies *c)
     // Delete head, which is an empty node
     free(c);
     c = NULL;
+}
+
+void Cookies_delete_const(const Cookies *c)
+{
+    Cookies_delete((Cookies *) c);
 }
 
 Cookie *Cookie_init(const SSPair *p)
@@ -308,7 +317,16 @@ void Cookies_print(const Cookies *cs)
 }
 #endif
 
+#ifdef Cookie_delete
+#undef Cookie_delete
+#endif
+
 void Cookie_delete(Cookie *c)
 {
     single_cookie_delete__(c);
+}
+
+void Cookie_delete_const(const Cookie *c)
+{
+    single_cookie_delete__((Cookie *) c);
 }

@@ -93,11 +93,11 @@ Response *signup(const Request *req)
             // Register an account
             accountDel(
                 accountCreate(get_db(), name, email, username, password));
-            Basic_string_delete((Basic_string *) name);
-            Basic_string_delete((Basic_string *) email);
-            Basic_string_delete((Basic_string *) username);
-            Basic_string_delete((Basic_string *) password);
-            Basic_string_delete((Basic_string *) confirmPassword);
+            Basic_string_delete(name);
+            Basic_string_delete(email);
+            Basic_string_delete(username);
+            Basic_string_delete(password);
+            Basic_string_delete(confirmPassword);
 
             responseSetStatus(response, FOUND);
             responseAddHeader(response,

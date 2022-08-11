@@ -14,6 +14,13 @@ void header_insert(Header *restrict h, const SSPair *restrict p);
 void header_insert_move(Header *restrict h, SSPair *restrict p);
 const char *header_get(const Header *restrict h, const char *restrict key);
 void header_delete(Header *h);
+void header_delete_const(const Header *h);
+
+#define header_delete(h) \
+    _Generic((h), \
+		const Header*: header_delete_const, \
+		Header*: header_delete \
+		)(h)
 
 // copy header context to string
 char *header_to_string(const Header *);

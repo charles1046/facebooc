@@ -10,6 +10,10 @@ Body *body_parser(const Header *restrict header, char *restrict buffer);
 
 void *body_get(const Body *restrict b, const char *restrict key);
 void body_delete(Body *b);
+void body_delete_const(const Body *b);
+
+#define body_delete(b) \
+    _Generic((b), const Body * : body_delete_const, Body * : body_delete)(b)
 
 #ifdef DEBUG
 void Body_print(const Body *b);

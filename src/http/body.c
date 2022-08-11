@@ -72,6 +72,10 @@ void *body_get(const Body *restrict b, const char *restrict key)
     return NULL;
 }
 
+#ifdef body_delete
+#undef body_delete
+#endif
+
 void body_delete(Body *b)
 {
     if (!b)
@@ -86,6 +90,11 @@ void body_delete(Body *b)
 
     // Delete head, which is an empty node
     Body_del__(b);
+}
+
+void body_delete_const(const Body *b)
+{
+    body_delete((Body *) b);
 }
 
 static inline _Bool is_supported_type(const char *str)

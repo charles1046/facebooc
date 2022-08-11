@@ -66,6 +66,10 @@ const char *query_get(const Query *restrict q, const char *restrict key)
     return NULL;
 }
 
+#ifdef query_delete
+#undef query_delete
+#endif
+
 void query_delete(Query *q)
 {
     if (likely(!q))  // Query string is not often happened
@@ -80,6 +84,11 @@ void query_delete(Query *q)
 
     // Delete head, which is an empty node
     Query_del__(q);
+}
+
+void query_delete_const(const Query *q)
+{
+    query_delete((Query *) q);
 }
 
 static inline Query *Query_new(const SSPair *p)

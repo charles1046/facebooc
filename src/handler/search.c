@@ -17,7 +17,7 @@ Response *search(const Request *req)
         Basic_string_init(query_get(req->queryString, "q"));
 
     if (query->size == 0) {
-        Basic_string_delete((Basic_string *) query);
+        Basic_string_delete(query);
         return NULL;
     }
 
@@ -57,7 +57,7 @@ Response *search(const Request *req)
     templateSet(template, "active", "search");
     templateSet(template, "loggedIn", "t");
     templateSet(template, "subtitle", "Search");
-    Basic_string_delete((Basic_string *) query);
+    Basic_string_delete(query);
 
     Response *response = responseNew();
     responseSetStatus(response, OK);

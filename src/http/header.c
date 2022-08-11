@@ -125,6 +125,10 @@ const char *header_get(const Header *restrict h, const char *restrict key)
     return NULL;
 }
 
+#ifdef header_delete
+#undef header_delete
+#endif
+
 void header_delete(Header *h)
 {
     if (unlikely(!h))
@@ -139,6 +143,11 @@ void header_delete(Header *h)
 
     // Delete head, which is an empty node
     Header_del__(h);
+}
+
+void header_delete_const(const Header *h)
+{
+    header_delete((Header *) h);
 }
 
 // The ': \r\n' should be already malloced outside, + 4

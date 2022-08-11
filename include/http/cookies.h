@@ -40,6 +40,13 @@ Cookies *Cookies_init(const char *key, const char *value);
 // Return NULL if not found
 Cookie *Cookies_get(const Cookies *c, const char *key);
 void Cookies_delete(Cookies *c);
+void Cookies_delete_const(const Cookies *c);
+
+#define Cookies_delete(c) \
+    _Generic((c), \
+		const Cookies*: Cookies_delete_const, \
+		Cookies*: Cookies_delete \
+		)(c)
 
 // --------- Single cookie ---------
 Cookie *Cookie_init(const SSPair *p);
@@ -52,6 +59,13 @@ void Cookie_gen_expire(char *buf, int duration);
 void Cookie_set_attr(Cookie *c, Cookie_attr attr, const char *value);
 
 void Cookie_delete(Cookie *c);
+void Cookie_delete_const(const Cookie *c);
+
+#define Cookie_delete(c) \
+    _Generic((c), \
+		const Cookie*: Cookie_delete_const, \
+		Cookie*: Cookie_delete \
+		)(c)
 
 #define Cookie_get_attr(cookie_p, attr) (((const char **) cookie_p)[attr])
 

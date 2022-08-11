@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -273,6 +274,7 @@ ret:
 
 bool accountCheckUsername(sqlite3 *DB, const Basic_string *username)
 {
+    bool res = false;
     sqlite3_stmt *statement = NULL;
 
     if (sqlite3_prepare_v2(DB, "SELECT id FROM accounts WHERE username = ?", -1,
@@ -286,10 +288,10 @@ bool accountCheckUsername(sqlite3 *DB, const Basic_string *username)
         SQLITE_OK)
         goto failed;
 
-    bool res = sqlite3_step(statement) != SQLITE_ROW;
+    res = sqlite3_step(statement) != SQLITE_ROW;
 
 failed:
-    Basic_string_delete((Basic_string *) username_encoded);
+    Basic_string_delete(username_encoded);
     sqlite3_finalize(statement);
 
     return res;
@@ -297,6 +299,7 @@ failed:
 
 bool accountCheckEmail(sqlite3 *DB, const Basic_string *email)
 {
+    bool res = false;
     sqlite3_stmt *statement = NULL;
 
     if (sqlite3_prepare_v2(DB, "SELECT id FROM accounts WHERE email = ?", -1,
@@ -309,10 +312,10 @@ bool accountCheckEmail(sqlite3 *DB, const Basic_string *email)
         SQLITE_OK)
         goto failed;
 
-    bool res = sqlite3_step(statement) != SQLITE_ROW;
+    res = sqlite3_step(statement) != SQLITE_ROW;
 
 failed:
-    Basic_string_delete((Basic_string *) email_encoded);
+    Basic_string_delete(email_encoded);
     sqlite3_finalize(statement);
 
     return res;
@@ -334,6 +337,7 @@ bool account_auth(sqlite3 *DB,
                   const Basic_string *username,
                   const Basic_string *password)
 {
+    bool res = false;
     if (unlikely(!username || !password))
         return false;
 
@@ -359,11 +363,10 @@ bool account_auth(sqlite3 *DB,
     char hashed_from_user[65];
     sha256_string(hashed_from_user, password);
 
-    bool res =
-        !strncmp(hashed_from_user, stored_hash, ARR_LEN(hashed_from_user));
+    res = !strncmp(hashed_from_user, stored_hash, ARR_LEN(hashed_from_user));
 
 failed:
-    Basic_string_delete((Basic_string *) username_encoded);
+    Basic_string_delete(username_encoded);
     sqlite3_finalize(statement);
     return res;
 }
