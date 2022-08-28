@@ -1,15 +1,15 @@
 ifeq ($(strip $(CFLAGS)),)
-CFLAGS = -std=c11 -Wall -Wextra -Werror
+CFLAGS = -std=gnu11 -Wall -Wextra -Werror
 endif
 
 ifeq ($(strip $(LDFLAGS)),)
-CFLAGS = -lsqlite3 -lpthread -ldl -lm
+LDFLAGS = -lsqlite3 -lpthread -ldl -lm -lc -lssl -lcrypto
 endif
 
 DEBUG = -DDEBUG -g -fsanitize=address
 
 SRC = $(shell find . -type f -name "*.[ch]")
-OBJ = $(patsubst %.c,%.o, $(filter %.c, $(SRC)))
+OBJ = $(SRC:%.c=%.o)
 
 .PHONY: all clean test
 

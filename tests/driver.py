@@ -4,6 +4,7 @@ import re
 
 
 def get_all_units() -> list():
+    """Each testing usit are *.o"""
     l = []
     cur_name = os.getcwd()
     for root, _, files in os.walk("./tests/", topdown=False):
